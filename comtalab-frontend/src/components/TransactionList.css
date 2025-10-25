@@ -1,0 +1,88 @@
+/* src/components/TransactionList.css */
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.list-title {
+  text-align: left;
+  color: var(--text-light);
+  margin: 0;
+}
+
+.date-input-discrete {
+  border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  width: 150px;
+}
+
+.transaction-list {
+  list-style-type: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 350px; /* La hauteur qu'on avait réglée */
+  overflow-y: auto; 
+  padding-right: 5px; 
+}
+
+.empty-list-item {
+  text-align: center;
+  color: var(--text-light);
+  padding: 40px;
+  font-style: italic;
+}
+
+.transaction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background-color: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  border-left-width: 5px;
+}
+.transaction-item.revenu { border-left-color: var(--accent-color); }
+.transaction-item.depense { border-left-color: var(--danger-color); }
+.transaction-details { display: flex; flex-direction: column; }
+.transaction-description { font-weight: 600; font-size: 1.1rem; }
+.transaction-meta { font-size: 0.9rem; color: var(--text-light); }
+.transaction-montant { font-weight: 600; font-size: 1.1rem; }
+.transaction-item.revenu .transaction-montant { color: var(--accent-color); }
+.transaction-item.depense .transaction-montant { color: var(--danger-color); }
+.transaction-actions button { padding: 6px 12px; font-size: 0.9rem; margin-left: 8px; }
+.btn-edit { background-color: var(--border-color); color: var(--text-light); }
+.btn-edit:hover { background-color: #ccc; }
+.btn-delete { background-color: var(--danger-color); color: white; }
+.btn-delete:hover { background-color: var(--danger-hover); }
+
+/* ... (tous les styles précédents) ... */
+
+/* Style pour les lignes du résumé journalier (Revenus et Dépenses) */
+.summary-line.day-total {
+  font-size: 1.1rem; /* Taille un peu plus petite que le résumé global */
+  color: var(--text-light); /* Gris clair pour le label */
+  justify-content: space-between; /* Texte à gauche, valeur à droite */
+}
+
+
+.summary-line.day-total .summary-value.revenu {
+  color: var(--accent-color);
+  font-weight: bold;
+}
+.summary-line.day-total .summary-value.depense {
+  color: var(--danger-color);
+  font-weight: bold;
+}
+
+/* ... (tous les styles suivants, s'il y en a) ... */

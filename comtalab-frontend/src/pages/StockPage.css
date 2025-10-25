@@ -1,0 +1,314 @@
+/* src/pages/StockPage.css */
+
+.stock-page-content h2,
+.stock-page-content h3 {
+  text-align: center;
+  color: var(--accent-color);
+  margin-bottom: 20px;
+}
+.stock-page-content h3 {
+    color: var(--text-light);
+    margin-top: 30px;
+    margin-bottom: 10px;
+    font-size: 1.3rem;
+}
+
+/* --- Styles Formulaire Horizontal --- */
+.add-stock-form.horizontal-form {
+  background-color: var(--card-background); padding: 15px;
+  border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 30px;
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+}
+.add-stock-form h3 { display: none; } /* Cache le titre interne */
+
+.form-control-stock {
+  display: flex; flex-direction: column; flex: 1 1 auto; min-width: 100px;
+}
+.form-control-stock:nth-of-type(1) { min-width: 140px; } /* Article */
+.form-control-stock:nth-of-type(2) { min-width: 140px; } /* Style/Nom */
+.form-control-stock:nth-of-type(3) { min-width: 90px; } /* Taille */
+.form-control-stock:nth-of-type(4) { min-width: 110px; } /* Couleur */
+.form-control-stock.quantity-input { flex-grow: 0; min-width: 70px; width: 70px; }
+.form-control-stock.price-display { flex-grow: 0; min-width: 90px; width: 90px; }
+
+.form-control-stock label { font-weight: 600; font-size: 0.8rem; color: var(--text-light); margin-bottom: 4px; }
+.form-control-stock input,
+.form-control-stock select { width: 100%; padding: 8px 10px; font-size: 0.9rem; }
+.form-control-stock.price-display input { font-weight: bold; color: var(--text-color); background-color: var(--background-color); text-align: right; }
+.form-control-stock input[type=number] { -moz-appearance: textfield; }
+.form-control-stock input[type=number]::-webkit-inner-spin-button,
+.form-control-stock input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+.add-stock-form .btn-submit-stock {
+  width: auto; flex-shrink: 0; padding: 8px 20px; margin-left: 10px;
+   background-color: var(--accent-color); color: white; border: none;
+   border-radius: 8px; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease;
+}
+.add-stock-form .btn-submit-stock:hover { background-color: var(--accent-hover); }
+
+/* --- FIN Styles Formulaire --- */
+
+
+.stock-divider { border: 0; border-top: 1px dashed var(--border-color); margin: 30px 0; }
+.error-message { color: var(--danger-color); background-color: #ffebee; border: 1px solid var(--danger-color); padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-size: 0.9rem; }
+
+
+/* --- Styles pour les Filtres --- */
+.stock-filters {
+  display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;
+  background-color: var(--card-background); padding: 15px;
+  border-radius: 8px; box-shadow: var(--shadow);
+}
+.filter-search-input {
+  flex: 2 1 300px; padding: 8px 12px; font-size: 0.9rem;
+  border: 1px solid var(--border-color); border-radius: 6px;
+}
+.filter-article-select {
+  flex: 1 1 200px; padding: 8px 12px; font-size: 0.9rem;
+  border: 1px solid var(--border-color); border-radius: 6px; background-color: #fff;
+}
+/* --- FIN Styles Filtres --- */
+
+
+/* --- Styles Sections Récapitulatives --- */
+.stock-sections-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.article-section {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--card-background);
+  box-shadow: var(--shadow);
+  padding: 0;
+  margin-bottom: 25px;
+  overflow: hidden;
+}
+
+.article-section-title {
+  color: white;
+  background-color: var(--accent-color);
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 0;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-transform: uppercase;
+}
+.article-section-title span {
+    font-size: 1rem; font-weight: normal; color: rgba(255, 255, 255, 0.8);
+    margin-left: 10px;
+}
+
+.stock-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.article-summary-card {
+  background-color: #fafafa;
+  border-radius: 6px;
+  padding: 12px 15px;
+  border: 1px solid #eee;
+  border-left: 4px solid var(--accent-color);
+  display: flex; flex-direction: column;
+  min-height: 150px;
+  position: relative;
+  transition: box-shadow 0.2s ease;
+}
+.article-summary-card:hover {
+    box-shadow: var(--shadow);
+}
+
+.article-summary-card h5 {
+  color: var(--text-color); margin-top: 0; margin-bottom: 10px;
+  font-size: 0.95rem; font-weight: 700;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  border-bottom: 1px solid var(--border-color); padding-bottom: 8px;
+  word-break: break-word; line-height: 1.3;
+  padding-right: 30px;
+}
+.article-summary-card h5 span {
+    font-size: 0.85rem; font-weight: normal; color: var(--text-light);
+    white-space: nowrap; margin-left: 8px;
+}
+
+.btn-delete-group {
+    position: absolute; top: 8px; right: 8px; background: none; border: none;
+    color: var(--danger-color); font-size: 1.1rem; cursor: pointer; padding: 4px;
+    line-height: 1; opacity: 0.2; transition: opacity 0.2s ease;
+}
+.article-summary-card:hover .btn-delete-group { opacity: 0.7; }
+.btn-delete-group:hover { opacity: 1; background-color: #ffebee; border-radius: 4px; }
+
+
+/* Liste des variations (Taille: Quantité +/-) */
+.variation-list {
+  list-style: none; padding: 0; margin: 0;
+  flex-grow: 1; max-height: 180px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--border-color) transparent;
+}
+.variation-list::-webkit-scrollbar { width: 5px; }
+.variation-list::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 3px; }
+
+.variation-list li {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 0; border-bottom: 1px dashed #eee;
+  font-size: 0.85rem;
+}
+.variation-list li:last-child { border-bottom: none; }
+
+.variation-list .variation-details {
+  color: var(--text-color); font-weight: 600; padding-right: 8px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.variation-quantity-controls {
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+}
+.variation-quantity-controls button {
+    padding: 1px 6px; font-size: 0.9rem;
+    font-weight: bold; line-height: 1; cursor: pointer;
+    border-radius: 4px; border: 1px solid var(--border-color);
+    background-color: white; color: var(--text-light);
+    width: 22px; height: 22px; display: inline-flex;
+    align-items: center; justify-content: center;
+}
+.variation-quantity-controls button:hover:not(:disabled) { background-color: #eee; }
+.variation-quantity-controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+.variation-quantity-controls button:first-of-type { color: var(--danger-color); border-color: var(--danger-color); }
+.variation-quantity-controls button:first-of-type:hover:not(:disabled) { background-color: #ffebee; }
+.variation-quantity-controls button:last-of-type { color: var(--accent-color); border-color: var(--accent-color); }
+.variation-quantity-controls button:last-of-type:hover { background-color: #e0f2f1; }
+
+.variation-list .variation-quantity {
+  font-weight: 600; color: var(--text-color);
+  min-width: 20px; text-align: center;
+}
+.no-stock-message { font-style: italic; color: var(--text-light); text-align: center; padding: 8px 0; }
+
+
+/* Styles pour les articles "Autre" */
+.custom-item-summary { margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--border-color); }
+.custom-item-summary h5 { margin: 0 0 10px 0; font-size: 1rem; font-weight: bold; color: var(--accent-color); display: flex; justify-content: space-between; }
+.custom-item-summary h5 span { font-size: 0.85rem; font-weight: normal; color: var(--text-light); }
+
+.empty-summary-message {
+    text-align: center; font-style: italic; color: var(--text-light); padding: 30px;
+}
+
+/* --- STYLES CORRIGÉS : Résumé Global (Bas de page) --- */
+.stock-global-summary {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color); /* Bordure plus subtile */
+    border-top: 4px solid var(--accent-color); /* Ligne de couleur en haut */
+    border-radius: 8px;
+    padding: 25px;
+    margin-top: 40px;
+    margin-bottom: 20px; /* Ajoute de l'espace en bas */
+    box-shadow: var(--shadow);
+}
+
+.stock-global-summary h4 {
+    font-size: 1.5rem;
+    color: var(--text-color);
+    margin-top: 0;
+    margin-bottom: 25px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.stock-global-summary .summary-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+.stock-global-summary .summary-value {
+    font-weight: 700;
+}
+
+.stock-global-summary .summary-value.accent {
+    color: var(--accent-color);
+    font-size: 1.8rem;
+}
+
+.stock-global-summary .summary-line.total {
+    font-size: 1.2rem;
+    font-weight: 700;
+    padding-bottom: 15px;
+}
+
+.stock-global-summary .summary-line.total.value-line {
+    padding-bottom: 5px;
+    font-size: 1.4rem;
+}
+.stock-global-summary .summary-line.total.value-line .summary-value.accent {
+    font-size: 2rem;
+}
+
+
+.stock-global-summary .summary-divider {
+    border: 0;
+    border-top: 1px dashed var(--border-color); /* Plus subtil */
+    margin: 15px 0;
+}
+
+.stock-global-summary .category-totals {
+    display: grid;
+    /* 2 colonnes max, min 250px */
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 10px 30px;
+    padding-top: 10px;
+}
+/* Style des lignes de catégorie dans la grille */
+.stock-global-summary .category-totals .summary-line {
+    font-size: 1rem;
+    padding: 6px 0;
+    border-bottom: 1px dashed #eee;
+    /* NOUVEAU : Aligne Quantité et Valeur à droite */
+    display: grid;
+    grid-template-columns: 1fr auto auto; /* Nom | Quantité | Valeur */
+    gap: 15px; /* Espace entre les colonnes */
+    align-items: baseline;
+}
+.stock-global-summary .category-totals .summary-line:last-child {
+    border-bottom: none;
+}
+.stock-global-summary .category-totals .summary-value { /* Quantité */
+    color: var(--text-light);
+    font-weight: 600;
+    text-align: right;
+}
+.stock-global-summary .category-totals .category-value { /* Valeur DZD */
+    color: var(--text-color);
+    font-weight: 700;
+    font-size: 1rem;
+    text-align: right;
+    white-space: nowrap; /* Empêche de passer à la ligne */
+}
+
+
+/* --- Responsive --- */
+@media (max-width: 992px) {
+    .add-stock-form.horizontal-form { gap: 15px; }
+    .form-control-stock { min-width: calc(33% - 10px); }
+     .stock-summary-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
+}
+@media (max-width: 768px) {
+  .add-stock-form.horizontal-form { flex-direction: column; align-items: stretch; }
+  .form-control-stock { min-width: unset; width: 100%; }
+  .add-stock-form .btn-submit-stock { margin-left: 0; margin-top: 10px; }
+   .stock-summary-grid { grid-template-columns: 1fr; }
+   .stock-global-summary .category-totals { grid-template-columns: 1fr; } /* Une colonne sur mobile */
+}

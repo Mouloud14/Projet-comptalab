@@ -1,0 +1,46 @@
+/* src/pages/HomePage.css */
+
+.home-page-content {
+  text-align: center; /* Centre tout */
+}
+
+.home-page-content h1 {
+  margin-bottom: 10px;
+}
+
+.home-page-content p {
+  color: var(--text-light);
+  margin-bottom: 30px;
+}
+
+.balance-display {
+  background-color: var(--background-color);
+  padding: 20px 30px;
+  border-radius: 12px;
+  display: inline-block;
+  margin-bottom: 30px;
+  border: 1px solid var(--border-color);
+}
+
+.balance-display span:first-child {
+  font-size: 1.2rem;
+  color: var(--text-light);
+  margin-right: 15px;
+}
+
+.balance-value {
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+
+.balance-value.positive { color: var(--accent-color); }
+.balance-value.negative { color: var(--danger-color); }
+
+.link-transactions {
+  display: block;
+  margin-top: 20px;
+  color: var(--accent-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+.link-transactions:hover { text-decoration: underline; }

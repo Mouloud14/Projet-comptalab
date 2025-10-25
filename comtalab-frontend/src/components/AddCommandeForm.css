@@ -1,0 +1,87 @@
+/* src/components/AddCommandeForm.css */
+
+.add-commande-form {
+  background-color: var(--card-background);
+  padding: 20px 25px;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  margin-bottom: 30px;
+}
+
+.add-commande-form h3 {
+  text-align: center;
+  color: var(--accent-color);
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+/* Grille pour un formulaire complexe */
+.form-grid-commande {
+  display: grid;
+  /* 3 colonnes flexibles */
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 15px 20px; /* Espace vertical et horizontal */
+  margin-bottom: 20px;
+}
+
+.form-control-commande {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Permet à un champ de prendre 2 colonnes */
+.form-control-commande.span-2 {
+  grid-column: span 2;
+}
+/* Permet à un champ de prendre 3 colonnes */
+.form-control-commande.span-3 {
+  grid-column: span 3;
+}
+
+
+.form-control-commande label {
+  font-weight: 600;
+  font-size: 0.8rem; /* Plus petit label */
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+
+.form-control-commande input[type="text"],
+.form-control-commande input[type="tel"],
+.form-control-commande input[type="number"],
+.form-control-commande input[type="date"],
+.form-control-commande select {
+  width: 100%;
+  padding: 8px 10px; /* Champs plus fins */
+  font-size: 0.9rem;
+  /* Styles hérités de index.css (bordure, radius) */
+}
+
+/* Bouton d'ajout principal */
+.btn-submit-commande {
+  width: 100%;
+  padding: 12px 15px;
+  font-size: 1rem;
+  font-weight: 600;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.btn-submit-commande:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Gère l'affichage sur mobile */
+@media (max-width: 768px) {
+  .form-grid-commande {
+    grid-template-columns: 1fr; /* Une seule colonne */
+  }
+  /* Force tous les champs à prendre la largeur pleine */
+  .form-control-commande.span-2,
+  .form-control-commande.span-3 {
+    grid-column: span 1;
+  }
+}

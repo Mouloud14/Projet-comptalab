@@ -1,0 +1,74 @@
+/* src/components/TransactionForm.css */
+.transaction-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* 1. NOUVEAU : Le header du formulaire */
+.form-header {
+  display: flex;
+  justify-content: space-between; /* Titre à gauche, date à droite */
+  align-items: center; /* Bien aligné verticalement */
+  margin-bottom: 5px;
+}
+
+.form-title {
+  color: var(--accent-color);
+  margin: 0;
+  text-align: left; /* C'est mieux aligné à gauche */
+}
+
+/* 2. NOUVEAU : Le style de la date discrète */
+.date-input-discrete {
+  border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  width: 150px; /* Largeur fixe */
+}
+
+
+/* Le reste des styles ne change pas */
+.form-control {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-control label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 5px;
+}
+
+.form-control input,
+.form-control select {
+  width: 100%;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-submit {
+  flex: 1;
+  background-color: var(--accent-color);
+  color: white;
+}
+
+.btn-submit:hover {
+  background-color: var(--accent-hover);
+}
+
+.btn-cancel {
+  background-color: var(--border-color);
+  color: var(--text-light);
+}
+.btn-cancel:hover {
+  background-color: #ccc;
+}

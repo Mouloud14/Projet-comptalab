@@ -1,0 +1,82 @@
+/* src/components/NetBenefitSummary.css */
+
+.net-benefit-wrapper {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 2px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* --- Styles pour les Onglets (copiés des dashboards) --- */
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.tab-button {
+  padding: 10px 20px;
+  font-size: 1rem; font-weight: 600;
+  border: 1px solid var(--border-color);
+  background-color: #fff; color: var(--text-light);
+  border-radius: 8px; cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tab-button:hover { background-color: var(--background-color); }
+.tab-button.active {
+  /* On choisit une couleur neutre (bleu) ou on garde le vert */
+  background-color: #1E88E5; /* Bleu */
+  border-color: #1E88E5;
+  color: white;
+}
+/* --- Fin des styles Onglets --- */
+
+
+/* On supprime le titre fixe */
+/* .net-benefit-title { ... } */
+
+/* Style pour le contenu (les 3 lignes) */
+.net-benefit-content {
+  width: 100%;
+  max-width: 450px; /* Un peu plus large pour les labels */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Styles réutilisés */
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-light);
+}
+.summary-line.total {
+  font-size: 1.3rem;
+  color: var(--text-color);
+}
+.summary-divider {
+  border: 0;
+  border-top: 1px dashed var(--border-color);
+  margin: 5px 0;
+}
+.summary-value {
+  font-weight: 700;
+}
+.net-benefit-label { /* Spécifique pour la ligne Bénéfice Net */
+  font-weight: 600;
+  color: var(--text-color);
+}
+.net-benefit-value {
+  font-weight: 700;
+  font-size: 1.5rem; /* Un peu plus petit que avant */
+}
+.net-benefit-value.revenu, .summary-value.revenu {
+  color: var(--accent-color);
+}
+.net-benefit-value.depense, .summary-value.depense {
+  color: var(--danger-color);
+}

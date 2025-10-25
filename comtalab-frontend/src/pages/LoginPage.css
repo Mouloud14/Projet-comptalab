@@ -1,0 +1,69 @@
+/* src/pages/LoginPage.css */
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--background-color);
+}
+
+.login-form {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px;
+  background-color: var(--card-background);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-form h2 {
+  text-align: center;
+  color: var(--accent-color);
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+/* Styles réutilisés pour les champs */
+.login-form .form-control {
+  display: flex;
+  flex-direction: column;
+}
+.login-form .form-control label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 5px;
+}
+/* Style pour l'input (hérité de index.css/App.css) */
+.login-form input {
+    font-size: 1rem;
+    padding: 10px 15px;
+}
+
+/* Style pour le bouton */
+.login-form .btn-submit {
+  background-color: var(--accent-color);
+  color: white;
+  margin-top: 10px;
+  font-size: 1rem;
+  padding: 12px 15px;
+  cursor: pointer;
+}
+.login-form .btn-submit:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Style pour le message d'erreur */
+.error-message {
+  color: var(--danger-color);
+  background-color: #ffebee;
+  border: 1px solid var(--danger-color);
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 0;
+  font-size: 0.9rem;
+}

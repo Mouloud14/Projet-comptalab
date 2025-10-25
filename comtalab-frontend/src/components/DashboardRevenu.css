@@ -1,0 +1,58 @@
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.tab-button {
+  padding: 10px 20px;
+  font-size: 1rem; font-weight: 600;
+  border: 1px solid var(--border-color);
+  background-color: #fff; color: var(--text-light);
+  border-radius: 8px; cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tab-button:hover { background-color: var(--background-color); }
+/* Couleur turquoise pour les revenus */
+.revenu-dashboard .tab-button.active, /* Classe ajoutée dans le JSX */
+.tab-button.active { /* Fallback */
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+
+/* Section Graphique (prend toute la largeur) */
+.chart-section {
+  width: 100%; /* Prend toute la largeur */
+  height: 250px;
+  font-size: 0.8rem;
+  margin-bottom: 20px; /* Espace avant les stats */
+}
+
+.no-data-chart {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; color: var(--text-light); font-style: italic;
+  background-color: var(--background-color); border-radius: 8px;
+}
+
+/* Section Stats (en dessous, prend toute la largeur) */
+.stats-section {
+  width: 100%; /* Prend toute la largeur */
+  display: flex; flex-direction: column;
+  gap: 15px;
+}
+
+.stat-line {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 1.1rem; font-weight: 600; color: var(--text-light);
+}
+.stat-value { font-weight: 700; font-size: 1.2rem; }
+/* Couleur turquoise pour les revenus */
+.stat-value.revenu {
+  color: var(--accent-color);
+}
+.summary-divider {
+  border: 0; border-top: 1px dashed var(--border-color);
+  margin: 0;
+}

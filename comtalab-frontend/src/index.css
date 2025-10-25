@@ -1,0 +1,51 @@
+/* src/index.css */
+
+/* 1. Définition de ta palette de couleurs (CSS Variables) */
+:root {
+  --background-color: #f4f7f6;  /* Un blanc très légèrement grisé, très doux */
+  --card-background: #ffffff;   /* Blanc pur pour les "cartes" */
+  --text-color: #1a1a1a;       /* Presque noir pour le texte */
+  --text-light: #555;        /* Gris pour les textes secondaires */
+  
+  /* Ton accent "vert-bleu" */
+  --accent-color: #00bfa5;   /* Un superbe "teal" / turquoise */
+  --accent-hover: #008c7a;   /* Plus foncé pour le survol */
+  
+  --danger-color: #e53935;   /* Rouge pour "supprimer" */
+  --danger-hover: #c62828;  /* Rouge plus foncé */
+  
+  --border-color: #e0e0e0;  /* Une bordure grise très claire */
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Ombre douce */
+}
+
+/* 2. Styles de base */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 3. Style de base pour les inputs et boutons */
+input, select, button {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-sizing: border-box; /* Très important pour le layout */
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
