@@ -1,150 +1,131 @@
 // src/pages/CommandesPage.jsx
 import React, { useState, useEffect } from 'react';
-import './CommandesPage.css';
-import AddCommandeForm from '../components/AddCommandeForm'; // <-- 1. IMPORTER LE FORMULAIRE
+import './CommandesPage.css'; // On garde le même CSS
 
-// Liste des états possibles (inchangée)
-const ETATS_LIVRAISON = [
-    'En préparation',
-    'Confirmé',
-    'Non confirmé',
-    'Envoyé',
-    'Annulé',
-];
+// MODIFIÉ: La fonction extractIframeSrc n'est plus nécessaire, on la supprime.
 
-function CommandesPage() {
-  const [commandes, setCommandes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+function CommandesPage({ user, onUserUpdate }) {
+  const [sheetUrl, setSheetUrl] = useState(user?.google_sheet_url || null);
+  // MODIFIÉ: Renommé iframeInput en urlInput pour plus de clarté
+  const [urlInput, setUrlInput] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Fonction pour charger les commandes
-  const fetchCommandes = async () => {
-    // Ne met pas setLoading(true) si c'est juste un refresh
-    // setLoading(true); 
-    setError(null);
-    try {
-      const response = await fetch('http://localhost:3001/api/commandes', { cache: 'no-store' });
-      if (!response.ok) throw new Error('Erreur réseau');
-      const data = await response.json();
-      setCommandes(Array.isArray(data) ? data : []);
-    } catch (err) {
-      setError("Impossible de charger les commandes: " + err.message);
-      setCommandes([]);
-    } finally {
-      setLoading(false); // S'assure que le chargement est terminé
-    }
-  };
-
-  // Charger les commandes au montage
   useEffect(() => {
-    fetchCommandes();
-  }, []);
+    setSheetUrl(user?.google_sheet_url || null);
+  }, [user]);
 
-  // Fonction pour mettre à jour (inchangée)
-  const handleUpdateCommande = async (id, field, value) => {
+  const handleSaveSheetUrl = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    // MODIFIÉ: Utilise directement l'URL entrée par l'utilisateur
+    const newUrl = urlInput.trim(); // trim() enlève les espaces au début/fin
+
+    // MODIFIÉ: Vérification simple si l'URL semble valide (commence par http)
+    if (!newUrl || !newUrl.startsWith('http')) {
+      setError("Veuillez entrer une URL Google Sheet valide (elle doit commencer par http ou https).");
+      setLoading(false);
+      return;
+    }
+
+    // MODIFIÉ: On vérifie si l'URL contient bien '/edit' pour rappeler que c'est le lien d'édition
+    if (!newUrl.includes('/edit')) {
+       setError("Attention : Pour pouvoir modifier la feuille, assurez-vous d'utiliser le lien d'édition (celui qui contient '/edit' dans l'URL).");
+       // On ne bloque pas la sauvegarde, mais on prévient l'utilisateur
+    }
+
+
     try {
-      const response = await fetch(`http://localhost:3001/api/commandes/${id}`, {
+      const response = await fetch('http://localhost:3001/api/user/sheet', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [field]: value }),
+        body: JSON.stringify({
+          username: user.username,
+          // MODIFIÉ: Envoie la nouvelle URL directement
+          google_sheet_url: newUrl
+        }),
       });
-      if (!response.ok) throw new Error('Échec de la mise à jour');
-      setCommandes(prevCommandes =>
-        prevCommandes.map(cmd =>
-          cmd.id === id ? { ...cmd, [field]: value } : cmd
-        )
-      );
+
+      if (response.ok) {
+        alert('Lien Google Sheet sauvegardé !');
+        // MODIFIÉ: Met à jour l'utilisateur et vide le champ d'URL
+        onUserUpdate({ ...user, google_sheet_url: newUrl });
+        setUrlInput(''); // Vide le champ après sauvegarde
+        // MODIFIÉ: Met à jour directement l'état local pour afficher l'iframe sans recharger
+        setSheetUrl(newUrl);
+      } else {
+        const errData = await response.json();
+        setError(errData.error || 'Erreur lors de la sauvegarde.');
+      }
     } catch (err) {
-      console.error("Erreur MàJ commande:", err);
-      alert('Erreur lors de la mise à jour.');
-      fetchCommandes(); // Recharger en cas d'erreur
+      setError('Erreur réseau.');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
+  
+  // --- AFFICHAGE ---
 
+  // CAS 1: L'utilisateur a déjà une URL sauvegardée
+  if (sheetUrl) {
+    return (
+      <div className="commandes-page-content full-iframe-mode">
+        <iframe
+          src={sheetUrl}
+          title="Google Sheet Commandes"
+          className="google-sheet-iframe"
+        ></iframe>
+        {/* MODIFIÉ: Le bouton change l'état local pour revenir au formulaire */}
+        <button onClick={() => setSheetUrl(null)} className="btn-change-sheet">
+          Changer le lien Google Sheet
+        </button>
+      </div>
+    );
+  }
+
+  // CAS 2: L'utilisateur n'a pas encore d'URL
   return (
-    <div className="commandes-page-content">
-      <h2>Gestion des Commandes</h2>
+    <div className="commandes-page-content setup-mode">
+      <h2>Connecter votre Google Sheet</h2>
+      {/* MODIFIÉ: Instructions mises à jour */}
+      <p>Pour afficher et modifier vos commandes, collez l'URL d'édition de votre Google Sheet ici.</p>
       
-      {/* --- 2. AFFICHER LE FORMULAIRE --- */}
-      {/* On passe la fonction fetchCommandes en prop pour le refresh */}
-      <AddCommandeForm onCommandeAdded={fetchCommandes} />
-      {/* --- FIN FORMULAIRE --- */}
+      {/* MODIFIÉ: Instructions mises à jour */}
+      <ol className="instructions">
+        <li>Ouvrez votre Google Sheet dans votre navigateur.</li>
+        <li>Copiez l'URL complète depuis la barre d'adresse. Elle doit ressembler à :<br /> `https://docs.google.com/spreadsheets/d/..../edit#gid=0`</li>
+        <li>Assurez-vous que vous êtes connecté au bon compte Google dans ce navigateur et que ce compte a les permissions de modification sur la feuille.</li>
+      </ol>
 
-
-      <hr className="divider"/>
-
-      <h3>Liste des Commandes</h3> {/* Ajout d'un sous-titre */}
-
-      {error && <p className="error-message">{error}</p>}
-      {loading && <p>Chargement des commandes...</p>}
-
-      {!loading && !error && (
-        <div className="table-container">
-          <table className="commandes-table">
-            {/* ... (thead et tbody restent identiques) ... */}
-            <thead>
-              <tr>
-                <th>État</th>
-                <th>Nom Prénom</th>
-                <th>Téléphone</th>
-                <th>Articles</th>
-                <th>Prix Total</th>
-                <th>Date Commande</th>
-                <th>Date Livraison</th>
-                <th>Type Livraison</th>
-                <th>Adresse</th>
-                <th>Commentaire</th>
-              </tr>
-            </thead>
-            <tbody>
-              {commandes.length === 0 && (
-                <tr><td colSpan="10" className="empty-stock">Aucune commande.</td></tr>
-              )}
-              {commandes.map(cmd => (
-                <tr key={cmd.id} className={`etat-${cmd.etat?.toLowerCase().replace(/ /g, '-')}`}>
-                  <td className="cell-etat">
-                    <select
-                      value={cmd.etat}
-                      onChange={(e) => handleUpdateCommande(cmd.id, 'etat', e.target.value)}
-                      className="etat-select"
-                    >
-                      {ETATS_LIVRAISON.map(etat => (
-                        <option key={etat} value={etat}>{etat}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>{cmd.nom_prenom}</td>
-                  <td>{cmd.telephone}</td>
-                  <td>{cmd.articles}</td>
-                  <td className="cell-prix">{cmd.prix_total} DZD</td>
-                  <td className="cell-date">{cmd.date_commande}</td>
-                  <td className="cell-date">
-                     <input
-                        type="text"
-                        defaultValue={cmd.date_livraison || ''}
-                        onBlur={(e) => handleUpdateCommande(cmd.id, 'date_livraison', e.target.value)}
-                        placeholder="JJ/MM/AAAA"
-                        className="table-input"
-                      />
-                  </td>
-                  <td>{cmd.type_livraison}</td>
-                  <td className="cell-adresse">{cmd.adresse}</td>
-                  <td className="cell-commentaire">
-                      <input
-                        type="text"
-                        defaultValue={cmd.commentaire || ''}
-                        onBlur={(e) => handleUpdateCommande(cmd.id, 'commentaire', e.target.value)}
-                        placeholder="..."
-                        className="table-input"
-                      />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <form className="setup-form" onSubmit={handleSaveSheetUrl}>
+        {/* MODIFIÉ: Label mis à jour */}
+        <label>Collez l'URL de votre Google Sheet ici :</label>
+        {/* MODIFIÉ: Champ changé en input type="url" */}
+        <input
+          type="url" // Change le type pour une meilleure validation/clavier mobile
+          value={urlInput}
+          onChange={(e) => setUrlInput(e.target.value)}
+          placeholder="https://docs.google.com/spreadsheets/d/..."
+          required
+          style={{ // Ajout rapide de style pour l'input
+             width: '100%',
+             padding: '10px',
+             borderRadius: '6px',
+             border: '1px solid var(--border-color)',
+             fontSize: '0.9rem',
+             fontFamily: 'sans-serif', // Police normale
+             boxSizing: 'border-box' // Pour que padding ne dépasse pas la largeur
+          }}
+        />
+        {error && <p className="error-message">{error}</p>}
+        <button type="submit" disabled={loading}>
+          {loading ? 'Sauvegarde...' : 'Sauvegarder et Afficher'}
+        </button>
+      </form>
     </div>
   );
 }

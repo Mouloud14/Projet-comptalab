@@ -1,6 +1,6 @@
 // src/pages/LoginPage.jsx
 import React, { useState } from 'react';
-import './LoginPage.css'; // Assure-toi que ce fichier CSS existe
+import './LoginPage.css';
 
 function LoginPage({ onLogin }) { // Reçoit la fonction onLogin de App.jsx
   const [username, setUsername] = useState('');
@@ -8,45 +8,40 @@ function LoginPage({ onLogin }) { // Reçoit la fonction onLogin de App.jsx
   const [error, setError] = useState('');
 
   const handleSubmit = async (event) => {
-    event.preventDefault(); // Empêche la page de se recharger
-    setError(''); // Vide les anciennes erreurs
+    event.preventDefault();
+    setError('');
 
-    // Correction importante : enlève les espaces au début ou à la fin
     const trimmedUsername = username.trim();
     const trimmedPassword = password.trim();
 
-    // Vérifie que les champs ne sont pas vides après nettoyage
     if (!trimmedUsername || !trimmedPassword) {
         setError("Veuillez remplir les deux champs.");
-        return; // Arrête la fonction ici
+        return;
     }
 
     try {
       const apiUrl = 'http://localhost:3001/api/login';
-      
-      // Envoie la requête au backend
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Envoie les données "nettoyées"
         body: JSON.stringify({ username: trimmedUsername, password: trimmedPassword }),
       });
 
-      // Gère la réponse
       if (response.ok) {
-        // Connexion réussie !
+        // NOUVEAU : Récupère les données de l'utilisateur
+        const data = await response.json(); 
+        
         if (typeof onLogin === 'function') {
-            onLogin(trimmedUsername); // Appelle la fonction de App.jsx avec le nom d'utilisateur
+            // Envoie l'objet utilisateur entier (id, username, google_sheet_url) à App.jsx
+            onLogin(data.user); 
         } else {
             console.error("LoginPage Erreur: onLogin n'est pas une fonction !");
             setError("Erreur interne (onLogin).");
         }
       } else {
-        // Échec (ex: 401 - Identifiants incorrects)
         setError('Nom d\'utilisateur ou mot de passe incorrect.');
       }
     } catch (err) {
-      // Erreur réseau (backend éteint, CORS, etc.)
       console.error("LoginPage: Erreur Fetch:", err);
       setError('Erreur de connexion au serveur.');
     }
@@ -64,7 +59,7 @@ function LoginPage({ onLogin }) { // Reçoit la fonction onLogin de App.jsx
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            autoFocus // Met le curseur ici au chargement
+            autoFocus
           />
         </div>
         <div className="form-control">

@@ -1,126 +1,134 @@
 /* src/pages/CommandesPage.css */
 
-.commandes-page-content h2 {
-  text-align: center;
-  color: var(--accent-color);
-  margin-bottom: 20px;
-}
-
-.divider {
-  border: 0;
-  border-top: 1px dashed var(--border-color);
-  margin: 20px 0;
-}
-
-/* Conteneur pour permettre le scroll horizontal sur mobile/tablette */
-.table-container {
-  width: 100%;
-  overflow-x: auto; /* Active le scroll horizontal si nécessaire */
+/* Mode 1: Configuration (pas encore de lien) */
+.commandes-page-content.setup-mode {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 30px;
   background-color: var(--card-background);
   border-radius: 8px;
   box-shadow: var(--shadow);
 }
-
-.commandes-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 1200px; /* Force le tableau à être large */
+.commandes-page-content.setup-mode h2 {
+  text-align: center;
+  color: var(--accent-color);
+  margin-top: 0;
+  margin-bottom: 15px;
 }
-
-.commandes-table th,
-.commandes-table td {
-  padding: 10px 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--border-color);
-  font-size: 0.9rem;
-  vertical-align: middle; /* Centre verticalement */
-}
-
-.commandes-table th {
-  background-color: var(--background-color);
-  font-weight: 600;
+.commandes-page-content.setup-mode p {
+  text-align: center;
+  font-size: 1rem;
   color: var(--text-light);
-  position: sticky; /* En-tête collant en haut (optionnel) */
-  top: 0;
-  z-index: 1;
+  margin-bottom: 25px;
 }
 
-.commandes-table td {
-    color: #333;
+.instructions {
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 15px 15px 15px 35px;
+  margin-bottom: 25px;
+}
+.instructions li {
+  margin-bottom: 8px;
+  color: var(--text-color);
+  font-size: 0.9rem;
 }
 
-/* --- Styles des Cellules Spécifiques --- */
-.commandes-table .cell-etat {
-    width: 160px; /* Largeur fixe pour le select */
+.setup-form {
+  display: flex;
+  flex-direction: column;
 }
-.commandes-table .cell-prix {
+.setup-form label {
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 10px;
+}
+.setup-form textarea {
+  width: 100%;
+  min-height: 100px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  resize: vertical;
+}
+.setup-form button {
+  background-color: var(--accent-color);
+  color: white;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 15px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.setup-form button:hover {
+  background-color: var(--accent-hover);
+}
+.setup-form button:disabled {
+  background-color: var(--text-light);
+  cursor: not-allowed;
+}
+.error-message {
+  color: var(--danger-color);
+  background-color: #ffebee;
+  border: 1px solid var(--danger-color);
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 15px;
+  font-size: 0.9rem;
+}
+
+
+/* Mode 2: Affichage de l'iframe (plein écran) */
+.commandes-page-content.full-iframe-mode {
+  display: flex;
+  flex-direction: column;
+  /* height: 100%; */ /* Commente ou supprime cette ligne */
+  height: 150vh;    /* Essaie ça */
+  padding: 0;
+  position: relative;
+  overflow-y: auto; 
+  overflow-x: hidden; 
+}
+
+.google-sheet-iframe {
+  border: none;
+  
+  /* --- CORRECTION POUR LE ZOOM (60%) --- */
+  
+  /* 1. Dézoom à 60% */
+  transform: scale(0.60);
+  
+  /* 2. Zoom depuis le coin haut-gauche */
+  transform-origin: 0 0;
+  
+  /* 3. Agrandit pour remplir (100% / 0.60 = 166.7%) */
+  width: 166.7%;
+  height: 166.7%;
+  
+  flex-grow: 1; 
+  /* --- FIN CORRECTION --- */
+}
+
+.btn-change-sheet {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 6px 12px;
+    font-size: 0.8rem;
     font-weight: 600;
-    white-space: nowrap;
-    text-align: right;
-}
-.commandes-table .cell-date {
-    width: 130px;
-    white-space: nowrap;
-}
-.commandes-table .cell-adresse {
-    min-width: 200px; /* Donne plus de place */
-    white-space: normal; /* Permet à l'adresse de passer à la ligne */
-    word-break: break-word;
-}
-.commandes-table .cell-commentaire {
-    min-width: 150px;
-}
-
-/* Styles pour les inputs dans le tableau */
-.table-input, .etat-select {
-    width: 100%;
-    padding: 6px 8px;
-    font-size: 0.9rem;
-    border: 1px solid transparent; /* Bordure transparente */
-    border-radius: 4px;
-    background-color: transparent;
-    transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-/* Apparaît seulement au focus */
-.table-input:focus, .etat-select:focus {
-    background-color: #fff;
-    border-color: var(--accent-color);
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 191, 165, 0.2);
-}
-.etat-select {
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     cursor: pointer;
-    font-weight: 600;
+    z-index: 10;
 }
-
-
-/* --- Styles basés sur l'état (comme Google Sheets) --- */
-/* Tu peux personnaliser ces couleurs */
-.commandes-table tr.etat-envoyé td {
-    background-color: #E0F2F1; /* Vert clair */
-}
-.commandes-table tr.etat-annulé td {
-    background-color: #FFEBEE; /* Rouge clair */
-    color: #999;
-    text-decoration: line-through;
-}
-.commandes-table tr.etat-confirmé td {
-    background-color: #E3F2FD; /* Bleu clair */
-}
-.commandes-table tr.etat-non-confirmé td {
-    background-color: #FFF9C4; /* Jaune clair */
-}
-/* Ajuste la couleur du select en fonction de l'état */
-.etat-envoyé .etat-select { color: #00796B; }
-.etat-annulé .etat-select { color: var(--danger-color); }
-.etat-confirmé .etat-select { color: #1E88E5; }
-.etat-non-confirmé .etat-select { color: #FBC02D; }
-.etat-en-préparation .etat-select { color: var(--text-light); }
-
-
-.empty-stock {
-    text-align: center !important;
-    font-style: italic;
-    color: var(--text-light);
-    padding: 30px !important;
+.btn-change-sheet:hover {
+    background-color: white;
 }
