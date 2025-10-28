@@ -1,134 +1,246 @@
 /* src/pages/CommandesPage.css */
 
-/* Mode 1: Configuration (pas encore de lien) */
-.commandes-page-content.setup-mode {
-  max-width: 800px;
-  margin: 20px auto;
-  padding: 30px;
-  background-color: var(--card-background);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-}
-.commandes-page-content.setup-mode h2 {
-  text-align: center;
-  color: var(--accent-color);
-  margin-top: 0;
-  margin-bottom: 15px;
-}
-.commandes-page-content.setup-mode p {
-  text-align: center;
-  font-size: 1rem;
-  color: var(--text-light);
-  margin-bottom: 25px;
+.commandes-page-content {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  max-width: 1200px; 
+  margin: 0 auto;   
 }
 
-.instructions {
-  background-color: var(--background-color);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 15px 15px 15px 35px;
-  margin-bottom: 25px;
-}
-.instructions li {
-  margin-bottom: 8px;
-  color: var(--text-color);
-  font-size: 0.9rem;
+.commandes-page-content h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px; 
 }
 
-.setup-form {
+/* *** NOUVEAU : Style pour le compteur *** */
+.commandes-page-content h1 .commande-count {
+  font-size: 1.1rem; /* Plus petit que le h1 */
+  font-weight: 500; /* Moins gras */
+  color: #666; /* Couleur plus claire */
+  margin-left: 10px; /* Espace */
+  vertical-align: middle; /* Aligne avec le texte */
+}
+
+/* Barre de filtres */
+.commandes-filters-bar {
   display: flex;
-  flex-direction: column;
-}
-.setup-form label {
-  font-weight: 600;
-  color: var(--text-color);
-  margin-bottom: 10px;
-}
-.setup-form textarea {
-  width: 100%;
-  min-height: 100px;
-  font-family: monospace;
-  font-size: 0.9rem;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  resize: vertical;
-}
-.setup-form button {
-  background-color: var(--accent-color);
-  color: white;
-  font-weight: 600;
-  padding: 12px;
+  flex-wrap: wrap; 
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 25px;
+  padding: 15px;
+  background-color: #f9f9f9;
   border-radius: 8px;
-  margin-top: 15px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-.setup-form button:hover {
-  background-color: var(--accent-hover);
-}
-.setup-form button:disabled {
-  background-color: var(--text-light);
-  cursor: not-allowed;
-}
-.error-message {
-  color: var(--danger-color);
-  background-color: #ffebee;
-  border: 1px solid var(--danger-color);
-  padding: 10px;
-  border-radius: 8px;
-  text-align: center;
-  margin-top: 15px;
-  font-size: 0.9rem;
+  border: 1px solid #eee;
 }
 
-
-/* Mode 2: Affichage de l'iframe (plein écran) */
-.commandes-page-content.full-iframe-mode {
-  display: flex;
-  flex-direction: column;
-  /* height: 100%; */ /* Commente ou supprime cette ligne */
-  height: 150vh;    /* Essaie ça */
-  padding: 0;
-  position: relative;
-  overflow-y: auto; 
-  overflow-x: hidden; 
-}
-
-.google-sheet-iframe {
-  border: none;
-  
-  /* --- CORRECTION POUR LE ZOOM (60%) --- */
-  
-  /* 1. Dézoom à 60% */
-  transform: scale(0.60);
-  
-  /* 2. Zoom depuis le coin haut-gauche */
-  transform-origin: 0 0;
-  
-  /* 3. Agrandit pour remplir (100% / 0.60 = 166.7%) */
-  width: 166.7%;
-  height: 166.7%;
-  
+.commandes-search-input {
   flex-grow: 1; 
-  /* --- FIN CORRECTION --- */
+  min-width: 250px; 
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box; 
 }
 
-.btn-change-sheet {
-    position: absolute;
-    bottom: 15px;
-    right: 15px;
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    padding: 6px 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    border-radius: 6px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    cursor: pointer;
-    z-index: 10;
+.commandes-status-filter {
+  flex-grow: 0; 
+  min-width: 200px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #fff;
+  cursor: pointer;
+  box-sizing: border-box;
 }
-.btn-change-sheet:hover {
-    background-color: white;
+
+/* Messages (loading, error, etc.) */
+.loading-message,
+.error-message,
+.no-commandes-message {
+  text-align: center;
+  padding: 20px;
+  font-size: 1.1rem;
+  color: #555;
+}
+
+.error-message {
+  color: #a94442;
+  background-color: #f2dede;
+  border: 1px solid #ebccd1;
+  border-radius: 4px;
+}
+
+/* Conteneur des cartes */
+.commandes-list-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+  gap: 20px; 
+}
+
+/* Styles des cartes (inchangés) */
+.commande-card {
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s ease-in-out, opacity 0.3s ease; 
+}
+
+.commande-card:hover {
+   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.commande-card.updating {
+  opacity: 0.6;
+  pointer-events: none; 
+}
+
+.card-header {
+  padding: 15px;
+  border-bottom: 1px solid #eee; 
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f9f9f9; 
+  border-top-left-radius: 8px; 
+  border-top-right-radius: 8px;
+  transition: background-color 0.3s ease, border-color 0.3s ease; 
+}
+
+/* Couleurs de fond UNIQUEMENT pour le .card-header */
+.commande-card.status-en-preparation .card-header {
+  background-color: #dff0d8; 
+  border-color: #cde6c4; 
+}
+.commande-card.status-confirme .card-header {
+  background-color: #e8dff0; 
+  border-color: #dcd0e7;
+}
+.commande-card.status-pret-a-livrer .card-header {
+  background-color: #fcf8e3; 
+  border-color: #f9f2cc;
+}
+.commande-card.status-echange .card-header,
+.commande-card.status-non-confirme .card-header { 
+  background-color: #e4e4e4; 
+  border-color: #dcdcdc;
+}
+.commande-card.status-envoye .card-header,
+.commande-card.status-annule .card-header {
+  background-color: #f8d7da; 
+  border-color: #f5c6cb;
+}
+
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  word-break: break-word; 
+}
+
+.card-header p {
+  margin: 0 0 0 10px; 
+  font-size: 0.9rem;
+  color: #666;
+  white-space: nowrap; 
+}
+
+.card-body {
+  padding: 15px;
+  flex-grow: 1; 
+}
+
+.card-body p {
+  margin: 0 0 10px 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #555;
+  word-break: break-word; 
+}
+.card-body p strong {
+  color: #333;
+  font-weight: 600; 
+}
+.card-body p:last-child {
+    margin-bottom: 0;
+}
+
+.card-body p small strong {
+    color: #444; 
+    font-weight: 600;
+}
+
+.card-footer {
+  padding: 10px 15px;
+  border-top: 1px solid #eee; 
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f9f9f9; 
+  border-bottom-left-radius: 8px; 
+  border-bottom-right-radius: 8px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.card-footer small {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+/* Style du <select> neutre (inchangé) */
+.status-select {
+  padding: 4px 10px;
+  border-radius: 5px; 
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  border: 1px solid #ccc; 
+  background-color: #f0f0f0; 
+  color: #333; 
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 25px; 
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%F2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.6-3.6%205.4-7.9%205.4-12.9%200-5-1.8-9.2-5.4-12.7z%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 8px top 50%;
+  background-size: .5em auto;
+  cursor: pointer;
+}
+.status-select:hover {
+  background-color: #e9e9e9;
+  border-color: #bbb;
+}
+.status-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Styles responsives (inchangés) */
+@media (max-width: 600px) {
+  .commandes-filters-bar {
+      flex-direction: column; 
+      gap: 10px;
+  }
+  .commandes-search-input,
+  .commandes-status-filter {
+      min-width: 100%; 
+  }
+  .commandes-list-container {
+     grid-template-columns: 1fr;
+  }
+  .commandes-page-content {
+     padding: 10px;
+  }
+  .card-header, .card-body, .card-footer {
+     padding: 12px;
+  }
 }

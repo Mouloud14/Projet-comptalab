@@ -54,7 +54,7 @@ function AddStockItemForm({ onStockAdded }) {
   const handleSubmit = async (e) => {
     e.preventDefault(); setFormError('');
     const nomFinal = isAutreMode ? style : nom;
-    const styleFinal = isAutreMode ? null : style;
+    const styleFinal = isAutreMode ? null : style; // Envoie NULL si 'autre'
     const quantiteParsed = parseInt(quantite);
     const tailleAEnvoyer = isSacADos ? 'Unique' : (taille || null);
 
@@ -62,15 +62,36 @@ function AddStockItemForm({ onStockAdded }) {
       setFormError(`Veuillez remplir ${isAutreMode ? '"Nom d\'article"' : '"Article"'} ${isTailleRequired ? ', "Taille"' : ''} et "Couleur" avec une quantité >= 0.`); return;
     }
      if (!isAutreMode && stylesDisponibles.length > 0 && !styleFinal && nomFinal !== 'autre') {
+        // Cas où un style est requis mais non sélectionné (ex: "standard" doit être cliqué)
         setFormError("Veuillez choisir un style pour cet article."); return;
      }
 
-    const newItem = { nom: nomFinal, taille: tailleAEnvoyer, couleur, style: styleFinal, quantite: quantiteParsed };
+    // *** MODIFIÉ : s'assure que 'styleFinal' est 'standard' si c'est le style par défaut non 'autre' ***
+    let finalStyleToSend = styleFinal;
+    if (!isAutreMode && !styleFinal && stylesDisponibles.length === 0) {
+        // Cas comme "Jogging" (vieux) qui n'a pas de style, mais n'est pas 'autre'
+        // On laisse finalStyleToSend à 'null'
+    } else if (!isAutreMode && !styleFinal && stylesDisponibles.includes('standard')) {
+        // Si l'utilisateur n'a rien choisi mais que "standard" est une option (ex: hoodie)
+        // On force à 'standard' ? Ou on garde le 'null' ? 
+        // Laissons 'null' pour l'instant, mais la validation ci-dessus devrait l'attraper.
+        // Si le style sélectionné est "standard", styleFinal sera "standard"
+    }
+    
+    // Si style (du state) est vide, styleFinal est null (sauf si 'autre')
+    // Si style est 'standard', styleFinal est 'standard'
+    finalStyleToSend = (isAutreMode) ? null : (style || null);
+    
+    // Si le nom est 'hoodie' et que le style est 'standard', on envoie 'standard'
+    // Si le nom est 'hoodie' et que le style est vide (pas choisi), on envoie 'null'
+    // C'est la validation qui doit forcer le choix si 'standard' est une option
+    
+    const newItem = { nom: nomFinal, taille: tailleAEnvoyer, couleur, style: finalStyleToSend, quantite: quantiteParsed };
 
     try {
-      console.log('Envoi au backend:', newItem); // Ajout d'un log pour vérifier l'envoi
+      console.log('Envoi au backend:', newItem); 
       const response = await fetch('http://localhost:3001/api/stock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newItem), });
-      console.log('Réponse du backend:', response.status); // Ajout d'un log pour voir le statut
+      console.log('Réponse du backend:', response.status); 
 
       if (response.ok) {
         alert('Article ajouté/quantité mise à jour !');
@@ -79,11 +100,11 @@ function AddStockItemForm({ onStockAdded }) {
       } else {
         const errorData = await response.json(); 
         setFormError(errorData.error || `Erreur ${response.status}.`);
-        console.error('Erreur backend:', errorData); // Log de l'erreur
+        console.error('Erreur backend:', errorData); 
       }
     } catch (err) { 
         setFormError('Erreur réseau.'); 
-        console.error('Erreur fetch:', err); // Log de l'erreur réseau
+        console.error('Erreur fetch:', err); 
     }
   };
 
@@ -115,13 +136,10 @@ function StockPage() {
   const [stockItems, setStockItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   const [articleFilter, setArticleFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchStock = async () => {
-    // Ne pas remettre loading à true ici si on rafraîchit après ajout/modif
-    // setLoading(true); 
     setError(null);
     try {
       const response = await fetch('http://localhost:3001/api/stock', { cache: 'no-store' });
@@ -136,14 +154,12 @@ function StockPage() {
         setError("Impossible de charger le stock: " + err.message); 
         setStockItems([]); 
     } finally { 
-        // Assure que loading passe à false après le premier chargement
         if (loading) setLoading(false); 
     }
   };
   
-  // Premier chargement
   useEffect(() => { 
-    setLoading(true); // Met loading à true seulement au montage
+    setLoading(true); 
     fetchStock(); 
   }, []);
 
@@ -153,37 +169,49 @@ function StockPage() {
      try {
        const response = await fetch(`http://localhost:3001/api/stock/${itemId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quantite: newQuantity }), });
        if (response.ok) {
-         // Rafraîchit tout le stock pour être sûr d'avoir la bonne valeur
-         // au lieu de juste mettre à jour l'item localement
          fetchStock(); 
-         // Original:
-         // const updatedData = await response.json();
-         // setStockItems(prevItems => Array.isArray(prevItems) ? prevItems.map(item => item.id === updatedData.id ? { ...item, quantite: updatedData.quantite } : item ) : []);
        } else { alert('Erreur MàJ quantité (serveur).'); }
      } catch (err) { alert('Erreur MàJ quantité (réseau).'); console.error(err); }
   };
 
+  // *** MODIFIÉ : Logique de suppression de groupe ***
   const handleDeleteGroup = async (groupInfo) => {
      let cardTitle = groupInfo.displayNom;
      if (groupInfo.displayStyle && groupInfo.displayStyle !== 'standard' && !groupInfo.displayNom.startsWith('autre-')) { cardTitle += ` - ${groupInfo.displayStyle}`; }
      cardTitle += ` - ${groupInfo.displayCouleur}`;
+     
+     // Trouve la clé 'nom' (ex: 't shirt' ou 'Sweat')
      const nomKey = Object.keys(articleDetails).find(k => articleDetails[k].display === groupInfo.displayNom) || groupInfo.displayNom;
-     const styleKey = (groupInfo.displayStyle === 'standard' || groupInfo.displayStyle === '') ? '' : groupInfo.displayStyle; // Correction: 'standard' ou vide = pas de style dans l'URL
+     
+     // *** CORRECTION DE LA LOGIQUE 'styleKey' ***
+     // 'displayStyle' vient du 'useMemo' (ligne 245), qui met 'standard' par défaut
+     // Si 'displayStyle' est vide, c'est un article "autre" et on n'envoie pas le paramètre style
+     // Si 'displayStyle' a une valeur (ex: 'standard', 'oversize'), on l'envoie.
+     let styleKeyParam = '';
+     if (groupInfo.displayStyle && groupInfo.displayStyle !== '') { 
+        styleKeyParam = `&style=${encodeURIComponent(groupInfo.displayStyle)}`;
+     }
+     // Si displayStyle est '' (cas "autre"), styleKeyParam reste vide.
+     // Le backend (corrigé) recevra 'style=undefined' et cherchera 'style IS NULL'. C'est BON.
+     // Si displayStyle est 'standard', styleKeyParam sera '&style=standard'.
+     // Le backend (corrigé) recevra 'style=standard' et cherchera 'style = "standard"'. C'est BON.
 
      if (!window.confirm(`Es-tu sûr de vouloir supprimer TOUS les articles "${cardTitle}" ?\nAction irréversible !`)) return;
 
-     const url = `http://localhost:3001/api/stock/group?nom=${encodeURIComponent(nomKey)}&couleur=${encodeURIComponent(groupInfo.displayCouleur)}${styleKey ? `&style=${encodeURIComponent(styleKey)}` : ''}`;
+     const url = `http://localhost:3001/api/stock/group?nom=${encodeURIComponent(nomKey)}&couleur=${encodeURIComponent(groupInfo.displayCouleur)}${styleKeyParam}`;
      console.log('DELETE Group URL:', url); // Log de l'URL pour débug
 
      try {
          const response = await fetch(url, { method: 'DELETE' });
-         if (response.ok || response.status === 404) {
-             alert(`Groupe "${cardTitle}" supprimé.`);
+         const result = await response.json(); // Toujours essayer de lire le JSON
+
+         if (response.ok) {
+             alert(result.message || `Groupe "${cardTitle}" supprimé.`); // Affiche le message du backend
              fetchStock(); // Recharger tout le stock
          } else {
-             const errorData = await response.json();
-             alert(`Erreur suppression groupe: ${errorData.error || response.status}`);
-             console.error('Erreur DELETE Group:', errorData);
+             // Gère les erreurs 400, 500, etc.
+             alert(`Erreur suppression groupe: ${result.error || response.status}`);
+             console.error('Erreur DELETE Group:', result);
          }
      } catch (err) {
          alert('Erreur réseau suppression groupe.');
@@ -192,52 +220,50 @@ function StockPage() {
   };
 
 
-  // --- LOGIQUE POUR LES CARTES ET LE RÉSUMÉ GLOBAL (CORRIGÉE useMemo) ---
+  // --- LOGIQUE POUR LES CARTES ET LE RÉSUMÉ GLOBAL (inchangée) ---
   const { stockSummaryByVariation, totalItemsByCategory, totalGlobalQuantity, totalGlobalValue, valueByArticle } = useMemo(() => {
-    // Toujours initialiser les variables
     let summary = {};
     let totalsByCategory = {}; 
     let valueByArticle = {};
     let globalTotalQuantity = 0;
     let globalTotalValue = 0; 
 
-    // Traiter seulement si stockItems est un array (même vide)
     if (Array.isArray(stockItems)) {
         stockItems.forEach(item => {
-            // Assurer que quantite est un nombre
             const itemQuantity = Number(item.quantite) || 0;
             if (isNaN(itemQuantity)) {
                 console.warn(`Item ID ${item.id} a une quantité invalide:`, item.quantite);
-                return; // Ignore cet item s'il a une quantité non numérique
+                return; 
             }
-
             const baseKey = Object.keys(articleDetails).find(key => key === item.nom) || 'autre';
             const couleur = item.couleur || 'Inconnue';
-            let groupKey = ''; let displayNom = ''; let displayStyle = item.style || 'standard'; let displayCouleur = couleur;
+            let groupKey = ''; let displayNom = ''; let displayStyle = item.style; // *** MODIFIÉ : Prend le style brut (peut être null) ***
+            let displayCouleur = couleur;
 
             if (baseKey === 'autre') {
                 const customNom = item.nom === 'autre' ? item.style || `Inconnu ID ${item.id}` : item.nom;
                 groupKey = `autre-${customNom}-${couleur}`; displayNom = customNom; displayStyle = ''; // Pas de style pour 'autre'
             } else {
-                groupKey = `${item.nom}-${displayStyle}-${couleur}`; displayNom = articleDetails[baseKey]?.display || item.nom;
+                // *** MODIFIÉ : Utilise 'standard' seulement si le style est null/vide ***
+                displayStyle = item.style || 'standard'; 
+                groupKey = `${item.nom}-${displayStyle}-${couleur}`; 
+                displayNom = articleDetails[baseKey]?.display || item.nom;
             }
 
             if (!summary[groupKey]) { summary[groupKey] = { displayNom, displayStyle, displayCouleur, totalQuantity: 0, quantitiesByTaille: {} }; }
 
             let unitPrice = 0;
-            if (baseKey !== 'autre') { // Pas de prix auto pour 'autre'
-                const styleToLook = item.style || 'standard'; // 'standard' pour hoodies sans style specifique
+            if (baseKey !== 'autre') { 
+                const styleToLook = item.style || 'standard'; 
                 const articleData = articleDetails[baseKey];
                 
-                // Vérifie si articleData, .prix, et la clé de style existent
                 if (articleData && articleData.prix && typeof articleData.prix[styleToLook] === 'number') { 
                     unitPrice = articleData.prix[styleToLook];
-                } else if (articleData && articleData.prix && styleToLook === 'standard' && typeof articleData.prix['standard'] === 'number') {
-                    // Fallback pour 'standard' si le style spécifique n'a pas de prix défini (ex: hoodie standard)
+                } else if (articleData && articleData.prix && !item.style && typeof articleData.prix['standard'] === 'number') {
+                     // Si item.style est NULL/vide, ET qu'un prix 'standard' existe
                      unitPrice = articleData.prix['standard'];
                 }
                 
-                // Cas spécial hoodie enfant taille adulte
                 if (baseKey === 'hoodie' && item.style === 'enfant' && ['S', 'M', 'L', 'XL', 'XXL'].includes((item.taille || '').toUpperCase())) { 
                     unitPrice = 1650; 
                 }
@@ -248,27 +274,22 @@ function StockPage() {
             globalTotalQuantity += itemQuantity;
             globalTotalValue += variationValue; 
 
-            const articleDisplayName = articleDetails[baseKey]?.display || displayNom; // Utilise displayNom pour 'autre'
+            const articleDisplayName = articleDetails[baseKey]?.display || displayNom; 
             
             totalsByCategory[articleDisplayName] = (totalsByCategory[articleDisplayName] || 0) + itemQuantity;
             valueByArticle[articleDisplayName] = (valueByArticle[articleDisplayName] || 0) + variationValue;
 
             const taille = item.taille || 'Unique';
-            // Crée l'entrée taille si elle n'existe pas
             if (!summary[groupKey].quantitiesByTaille[taille]) {
                  summary[groupKey].quantitiesByTaille[taille] = { id: item.id, quantite: 0 };
             }
-            // Met à jour la quantité pour cette taille (même si plusieurs lignes DB ont la même taille)
             summary[groupKey].quantitiesByTaille[taille].quantite += itemQuantity;
-            // Garde l'ID du dernier item rencontré pour cette taille (pour les boutons +/-)
             summary[groupKey].quantitiesByTaille[taille].id = item.id; 
         });
     } else {
-        // Si stockItems n'est pas un array (ne devrait pas arriver avec useState([]))
         console.error("stockItems n'est pas un array:", stockItems);
     }
 
-    // Retourne toujours l'objet complet
     return { 
         stockSummaryByVariation: summary, 
         totalItemsByCategory: totalsByCategory, 
@@ -276,9 +297,8 @@ function StockPage() {
         totalGlobalValue: globalTotalValue, 
         valueByArticle: valueByArticle 
     };
-  }, [stockItems]); // Dépend uniquement de stockItems
-  // --- FIN LOGIQUE CARTES ET VALEUR ---
-
+  }, [stockItems]); 
+  // --- FIN LOGIQUE CARTES ---
 
   // --- Fonctions de Tri et Filtrage (inchangées) ---
   const articleOrder = ['t shirt', 'hoodie', 'jogging', 'sac a dos', 'autre'];
@@ -286,15 +306,13 @@ function StockPage() {
   const getSortedKeysForArticle = (articleBaseKey) => {
       return Object.keys(stockSummaryByVariation)
           .filter(key => {
-              if (articleBaseKey === 'autre') { return key.startsWith('autre-'); }
-              // Gère les cas où item.nom n'est pas dans articleDetails (considéré comme 'autre')
               const baseItemKey = key.split('-')[0];
               const isInDetails = Object.keys(articleDetails).includes(baseItemKey);
               if (articleBaseKey === 'autre') return !isInDetails || key.startsWith('autre-');
               return key.startsWith(`${articleBaseKey}-`);
           })
-          .filter(key => stockSummaryByVariation[key]?.totalQuantity > 0) // Filtre quantité > 0
-          .sort((keyA, keyB) => { // Tri: Style puis Couleur
+          .filter(key => stockSummaryByVariation[key]?.totalQuantity > 0) 
+          .sort((keyA, keyB) => { 
               const summaryA = stockSummaryByVariation[keyA];
               const summaryB = stockSummaryByVariation[keyB];
               const styleCompare = (summaryA?.displayStyle || '').localeCompare(summaryB?.displayStyle || '');
@@ -306,64 +324,45 @@ function StockPage() {
   const filteredDisplayKeys = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
     return Object.keys(stockSummaryByVariation)
-      .filter(key => stockSummaryByVariation[key]?.totalQuantity > 0) // Uniquement ceux avec stock > 0
-      .filter(key => { // Filtre par catégorie (articleFilter)
+      .filter(key => stockSummaryByVariation[key]?.totalQuantity > 0) 
+      .filter(key => { 
           const baseItemKey = key.split('-')[0];
           const isInDetails = Object.keys(articleDetails).includes(baseItemKey);
-          
           if (articleFilter === 'all') return true;
           if (articleFilter === 'autre') return !isInDetails || key.startsWith('autre-');
           return key.startsWith(`${articleFilter}-`);
       })
-      .filter(key => { // Filtre par terme de recherche
+      .filter(key => { 
           if (term === '') return true;
           const summary = stockSummaryByVariation[key];
           if (!summary) return false;
-
-          // Construit le titre complet pour la recherche
           let cardTitle = summary.displayNom;
           if (summary.displayStyle && summary.displayStyle !== 'standard' && !key.startsWith('autre-')) { 
               cardTitle += ` ${summary.displayStyle}`; 
           }
           cardTitle += ` ${summary.displayCouleur}`;
-          
-          // Recherche dans le titre
           if (cardTitle.toLowerCase().includes(term)) return true;
-          
-          // Recherche dans les tailles
           const hasMatchingTaille = Object.keys(summary.quantitiesByTaille)
               .some( taille => taille.toLowerCase().includes(term) );
           if (hasMatchingTaille) return true;
-          
-          return false; // Non trouvé
+          return false; 
       })
-      .sort((keyA, keyB) => { // Tri final pour l'affichage
+      .sort((keyA, keyB) => { 
           const summaryA = stockSummaryByVariation[keyA];
           const summaryB = stockSummaryByVariation[keyB];
-          
           const baseKeyA = keyA.split('-')[0];
           const baseKeyB = keyB.split('-')[0];
-
           const indexA = articleOrder.indexOf(baseKeyA === 'autre' ? 'autre' : baseKeyA);
           const indexB = articleOrder.indexOf(baseKeyB === 'autre' ? 'autre' : baseKeyB);
-          
           const effectiveIndexA = indexA === -1 ? articleOrder.indexOf('autre') : indexA; 
           const effectiveIndexB = indexB === -1 ? articleOrder.indexOf('autre') : indexB;
-
-          // 1. Tri par Ordre d'Article Principal
           if (effectiveIndexA !== effectiveIndexB) { return effectiveIndexA - effectiveIndexB; }
-          
-          // 2. Tri par Nom (si 'autre')
           if (baseKeyA === 'autre' && baseKeyB === 'autre') {
                const nameCompare = (summaryA?.displayNom || '').localeCompare(summaryB?.displayNom || '');
                if (nameCompare !== 0) return nameCompare;
           }
-          
-          // 3. Tri par Style (si applicable)
           const styleCompare = (summaryA?.displayStyle || '').localeCompare(summaryB?.displayStyle || '');
           if (styleCompare !== 0) return styleCompare;
-          
-          // 4. Tri par Couleur
           return (summaryA?.displayCouleur || '').localeCompare(summaryB?.displayCouleur || '');
       });
   }, [stockSummaryByVariation, articleFilter, searchTerm]);
@@ -373,20 +372,19 @@ function StockPage() {
   // --- Formatage Argent (inchangé) ---
   const formatArgent = (nombre) => {
       if (typeof nombre !== 'number' || isNaN(nombre)) {
-          return '0 DZD'; // Retourne 0 si l'entrée n'est pas un nombre valide
+          return '0 DZD'; 
       }
       return new Intl.NumberFormat('fr-FR').format(nombre.toFixed(0)) + ' DZD';
   };
   // --- FIN Formatage ---
 
 
-  // --- RENDER ---
+  // --- RENDER (inchangé) ---
   return (
     <div className="stock-page-content">
       <h2>Gestion du Stock</h2>
       <AddStockItemForm onStockAdded={fetchStock} />
       <hr className="stock-divider"/>
-
       <div className="stock-filters">
         <input type="text" placeholder="Rechercher par nom, style, couleur, taille..." className="filter-search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         <select className="filter-article-select" value={articleFilter} onChange={(e) => setArticleFilter(e.target.value)}>
@@ -394,30 +392,20 @@ function StockPage() {
           {articleOrder.map(key => ( <option key={key} value={key}>{articleDetails[key]?.display || key}</option> ))}
         </select>
       </div>
-      
       <h3>Récapitulatif Détaillé du Stock</h3>
-
-      {/* --- Affichage Chargement / Erreur / Contenu --- */}
       {loading ? (
         <p>Chargement du stock...</p>
       ) : error ? (
         <p className="error-message">{error}</p>
       ) : (
         <div className="stock-content-wrapper">
-          {/* Vérifie s'il y a des clés à afficher après filtrage */}
           {filteredDisplayKeys.length > 0 ? (
              <div className="stock-sections-container">
-                {/* Structure par section d'article */}
                 {articleOrder.map(articleKey => {
-                    // Récupère les clés triées pour cette section d'article
                     const variationKeys = getSortedKeysForArticle(articleKey);
-                    // Garde seulement celles qui passent les filtres globaux
                     const displayedKeysInSection = variationKeys.filter(key => filteredDisplayKeys.includes(key));
-                    
-                    if (displayedKeysInSection.length === 0) return null; // Ne rend pas la section si vide après filtrage
-
+                    if (displayedKeysInSection.length === 0) return null; 
                     const totalArticleQuantity = displayedKeysInSection.reduce((sum, key) => sum + (stockSummaryByVariation[key]?.totalQuantity || 0), 0);
-
                     return (
                       <section key={articleKey} className="article-section">
                         <h4 className="article-section-title">
@@ -428,13 +416,11 @@ function StockPage() {
                           {displayedKeysInSection.map(key => {
                             const variationSummary = stockSummaryByVariation[key];
                             if (!variationSummary) return null; 
-
                             let cardTitle = variationSummary.displayNom;
                             if (variationSummary.displayStyle && variationSummary.displayStyle !== 'standard' && !key.startsWith('autre-')) { 
                                 cardTitle += ` - ${variationSummary.displayStyle}`; 
                             }
                             cardTitle += ` - ${variationSummary.displayCouleur}`;
-
                             return (
                               <div key={key} className="article-summary-card">
                                 <h5>
@@ -444,8 +430,8 @@ function StockPage() {
                                 </h5>
                                 <ul className="variation-list size-only-list">
                                   {Object.entries(variationSummary.quantitiesByTaille)
-                                    .filter(([_, data]) => data.quantite > 0) // Affiche seulement si qté > 0
-                                    .sort(([tailleA], [tailleB]) => { // Tri des tailles
+                                    .filter(([_, data]) => data.quantite > 0) 
+                                    .sort(([tailleA], [tailleB]) => { 
                                         const order = ['6 ans', '8 ans', '10 ans', '12 ans', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'Unique', '-'];
                                         return order.indexOf(tailleA) - order.indexOf(tailleB);
                                     })
@@ -459,7 +445,6 @@ function StockPage() {
                                         </span>
                                       </li>
                                     ))}
-                                    {/* Message si qté totale > 0 mais toutes les tailles sont à 0 (ne devrait pas arriver avec le filtre .filter(([_, data]) => data.quantite > 0)) */}
                                     {variationSummary.totalQuantity > 0 && Object.values(variationSummary.quantitiesByTaille).every(data => data.quantite <= 0) && <li className="no-stock-message">Stock épuisé</li> }
                                 </ul>
                               </div>
@@ -471,11 +456,8 @@ function StockPage() {
                   })}
               </div>
           ) : (
-              // Message si aucun résultat après filtrage/recherche
               <p className="empty-summary-message">Aucun article ne correspond à votre recherche ou filtre.</p>
           )}
-
-          {/* --- Section Récapitulatif Global (toujours affichée si pas d'erreur) --- */}
           <div className="stock-global-summary">
               <h4>Totaux et Valeur de l'Inventaire</h4>
               <div className="summary-line total">
@@ -506,11 +488,9 @@ function StockPage() {
                     {Object.keys(totalItemsByCategory).length === 0 && <p className='empty-summary-message'>Aucun article en stock.</p>}
               </div>
           </div>
-          {/* --- FIN Section Récap Global --- */}
-        </div> // Fin stock-content-wrapper
+        </div> 
       )} 
-      {/* --- FIN Affichage --- */}
-    </div> // Fin stock-page-content
+    </div> 
   );
 }
 
