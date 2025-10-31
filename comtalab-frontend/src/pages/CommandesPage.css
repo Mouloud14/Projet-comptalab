@@ -1,246 +1,459 @@
-/* src/pages/CommandesPage.css */
+/* src/pages/CommandesPage.css (Moderne et Discret) */
+
+:root {
+  /* --- Couleurs (Inchangées, elles sont bien) --- */
+  --primary-color: #4CAF50;
+  --secondary-color: #2196F3;
+  --text-color: #333;
+  --light-text-color: #666;
+  --border-color: #e0e0e0;
+  --bg-light: #f9f9f9;
+  --bg-page: #f0f2f5;
+
+  /* --- Ombres (Plus subtiles) --- */
+  --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-medium: 0 4px 10px rgba(0, 0, 0, 0.08);
+
+  /* --- Couleurs de Statut (Inchangées) --- */
+  --status-confirme-bg: #E1BEE7;
+  --status-confirme-border: #CE93D8;
+  --status-confirme-select: #BA68C8; /* Violet */
+
+  --status-en-preparation-bg: #C8E6C9;
+  --status-en-preparation-border: #A5D6A7;
+  --status-en-preparation-select: #66BB6A; /* Vert */
+
+  --status-non-confirme-bg: #BBDEFB;
+  --status-non-confirme-border: #90CAF9;
+  --status-non-confirme-select: #42A5F5; /* Bleu */
+
+  --status-annule-bg: #FFCDD2;
+  --status-annule-border: #EF9A9A;
+  --status-annule-select: #E57373; /* Rouge */
+
+  --status-pret-a-livrer-bg: #FFF9C4;
+  --status-pret-a-livrer-border: #FFF59D;
+  --status-pret-a-livrer-select: #FBC02D; /* Jaune/Orangé plus lisible */
+
+  --status-echange-bg: #F5F5F5;
+  --status-echange-border: #E0E0E0;
+  --status-echange-select: #757575; /* Gris foncé */
+
+  --status-envoye-bg: #F5F5F5;
+  --status-envoye-border: #E0E0E0;
+  --status-envoye-select: #757575; /* Gris foncé */
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-page);
+  color: var(--text-color);
+  font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 .commandes-page-content {
-  padding: 20px;
-  font-family: Arial, sans-serif;
-  max-width: 1200px; 
-  margin: 0 auto;   
+  padding: 25px 30px; /* Un peu plus de marge sur les côtés */
+  max-width: 1400px; /* Augmenté pour les grands écrans */
+  margin: 0 auto;
 }
 
 .commandes-page-content h1 {
-  text-align: center;
-  color: #333;
-  margin-bottom: 20px; 
+  /* MODIFIÉ : Alignement à gauche, plus moderne */
+  text-align: left;
+  color: var(--text-color);
+  margin-bottom: 20px;
+  font-size: 2rem;
+  font-weight: 700;
 }
 
-/* *** NOUVEAU : Style pour le compteur *** */
 .commandes-page-content h1 .commande-count {
-  font-size: 1.1rem; /* Plus petit que le h1 */
-  font-weight: 500; /* Moins gras */
-  color: #666; /* Couleur plus claire */
-  margin-left: 10px; /* Espace */
-  vertical-align: middle; /* Aligne avec le texte */
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--light-text-color);
+  margin-left: 10px;
+  vertical-align: baseline;
 }
 
-/* Barre de filtres */
+/* ---
+     SECTION GAIN POTENTIEL (LA PLUS GROSSE MODIFICATION)
+     On réduit drastiquement sa taille pour qu'il ne pousse pas le contenu.
+--- */
+.financial-summary-container {
+  background: #ffffff;
+  padding: 15px 20px; /* Padding réduit */
+  border-radius: 12px;
+  margin-bottom: 20px; /* Marge réduite */
+  box-shadow: var(--shadow-light);
+  font-size: 0.9rem; /* Police plus petite */
+}
+
+/* Style pour TOUTES les lignes (Ventes, Coûts, etc.) */
+.financial-summary-container .summary-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0; /* Padding vertical très réduit */
+  margin: 0;
+}
+
+/* Ligne "Bénéfice Brut" */
+.financial-summary-container .summary-line:nth-of-type(4) {
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-top: 1px solid #eee;
+  margin-top: 8px; /* Espacement réduit */
+  padding-top: 8px;
+}
+
+/* Ligne "Coût DTF" */
+.financial-summary-container .summary-line:nth-of-type(5) {
+  border-top: 1px solid #eee;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+/* Ligne "Gain NET Final" */
+.financial-summary-container .summary-line.total {
+  font-size: 1.2rem;
+  font-weight: bold;
+  border-top: 2px solid var(--primary-color);
+  margin-top: 8px; /* Espacement réduit */
+  padding-top: 8px;
+}
+
+/* Ligne 1 (Ventes) */
+.financial-summary-container .summary-line:first-of-type span:last-of-type {
+  font-weight: 600;
+  color: var(--status-en-preparation-select); /* Vert */
+}
+
+/* Lignes 2 & 3 (Coûts) */
+.financial-summary-container .summary-line:nth-of-type(2) span:last-of-type,
+.financial-summary-container .summary-line:nth-of-type(3) span:last-of-type {
+  font-weight: 500;
+  color: var(--status-annule-select); /* Rouge */
+}
+
+/* Ligne 4 & 6 (Bénéfice & Net) */
+.financial-summary-container .summary-line:nth-of-type(4) span:last-of-type,
+.financial-summary-container .summary-line.total span:last-of-type {
+  color: var(--primary-color);
+}
+
+/* Ligne 5 (Input DTF) */
+.financial-summary-container .summary-line label {
+  font-weight: 600;
+  color: var(--light-text-color);
+}
+.financial-summary-container .summary-line input[type="number"] {
+  width: 100px; /* Largeur réduite */
+  padding: 5px 8px; /* Padding réduit */
+  text-align: right;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+/* --- FIN SECTION GAIN POTENTIEL --- */
+
+
+/* Barre de filtres (Padding réduit) */
 .commandes-filters-bar {
   display: flex;
-  flex-wrap: wrap; 
-  justify-content: space-between;
+  flex-wrap: wrap;
+  justify-content: flex-start; /* Alignés à gauche */
   gap: 15px;
   margin-bottom: 25px;
-  padding: 15px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  border: 1px solid #eee;
+  padding: 15px 20px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: var(--shadow-light);
+  border: none;
 }
 
 .commandes-search-input {
-  flex-grow: 1; 
-  min-width: 250px; 
-  padding: 10px 12px;
-  font-size: 0.9rem;
+  flex: 1 1 300px; /* Prend plus de place */
+}
+.commandes-status-filter {
+  flex: 1 1 200px; /* Prend moins de place */
+}
+
+.commandes-search-input,
+.commandes-status-filter,
+.btn-refresh-commandes { /* Style pour le bouton rafraîchir */
+  padding: 12px 15px;
+  font-size: 0.95rem;
   border: 1px solid #ccc;
-  border-radius: 5px;
-  box-sizing: border-box; 
+  border-radius: 8px;
+  box-sizing: border-box;
+  transition: all 0.2s ease-in-out;
+  background-color: #fff;
+}
+
+.btn-refresh-commandes {
+  flex-basis: auto; /* Juste la largeur du texte */
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-color);
+}
+.btn-refresh-commandes:hover {
+  background-color: #f5f5f5;
+  border-color: #bbb;
+}
+
+.commandes-search-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+  outline: none;
+}
+
+.commandes-status-filter:focus {
+  border-color: #ccc;
+  box-shadow: none;
+  outline: none;
 }
 
 .commandes-status-filter {
-  flex-grow: 0; 
-  min-width: 200px;
-  padding: 10px 12px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  background-color: #fff;
+  font-weight: 500;
   cursor: pointer;
-  box-sizing: border-box;
+  color: var(--text-color);
+  background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20fill%3D%22%23666666%22%20d%3D%22M7%2010l5%205%205-5z%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 1em auto;
 }
 
-/* Messages (loading, error, etc.) */
+/* ... (Styles .loading-message, .error-box, etc. inchangés) ... */
 .loading-message,
-.error-message,
 .no-commandes-message {
   text-align: center;
-  padding: 20px;
-  font-size: 1.1rem;
-  color: #555;
+  padding: 30px;
+  font-size: 1.15rem;
+  color: var(--light-text-color);
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: var(--shadow-light);
+  margin-top: 20px;
 }
-
+.error-box {
+  padding: 25px;
+  background: #fff0f0;
+  border-radius: 12px;
+  margin: 20px 0;
+  border: 1px solid #ffcccc;
+  box-shadow: var(--shadow-light);
+}
 .error-message {
-  color: #a94442;
-  background-color: #f2dede;
-  border: 1px solid #ebccd1;
-  border-radius: 4px;
+  color: #d32f2f;
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  font-size: 1.1rem;
+  margin-bottom: 20px;
 }
+.sheet-url-form {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+  text-align: center;
+}
+.sheet-url-form h4 { color: var(--text-color); font-size: 1.1rem; margin-bottom: 10px; }
+.sheet-url-form p { color: var(--light-text-color); margin-bottom: 15px; }
+.sheet-url-form input[type="url"] { width: calc(100% - 30px); max-width: 500px; padding: 12px 15px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; font-size: 1rem; transition: all 0.2s ease-in-out; }
+.sheet-url-form input[type="url"]:focus { border-color: var(--secondary-color); box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2); outline: none; }
+.sheet-url-form button[type="submit"] { background-color: var(--secondary-color); color: white; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+.sheet-url-form button[type="submit"]:hover { background-color: #1976D2; box-shadow: var(--shadow-light); }
+.sheet-url-form .urlSaveMessage { margin-top: 15px; font-size: 0.95rem; color: var(--light-text-color); }
 
 /* Conteneur des cartes */
 .commandes-list-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
-  gap: 20px; 
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Cartes légèrement plus larges */
+  gap: 20px;
 }
 
-/* Styles des cartes (inchangés) */
+/* Styles des cartes */
 .commande-card {
   background-color: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 10px;
+  box-shadow: var(--shadow-light);
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s ease-in-out, opacity 0.3s ease; 
+  transition: box-shadow 0.2s ease-out; /* Effet de hover plus simple */
+  overflow: hidden;
 }
 
 .commande-card:hover {
-   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-medium);
 }
 
 .commande-card.updating {
-  opacity: 0.6;
-  pointer-events: none; 
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .card-header {
-  padding: 15px;
-  border-bottom: 1px solid #eee; 
+  padding: 16px 18px;
+  /* MODIFIÉ : Pas de bordure, le fond suffit */
+  border-bottom: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #f9f9f9; 
-  border-top-left-radius: 8px; 
-  border-top-right-radius: 8px;
-  transition: background-color 0.3s ease, border-color 0.3s ease; 
+  background-color: var(--bg-light);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  transition: background-color 0.3s ease;
 }
 
-/* Couleurs de fond UNIQUEMENT pour le .card-header */
-.commande-card.status-en-preparation .card-header {
-  background-color: #dff0d8; 
-  border-color: #cde6c4; 
-}
-.commande-card.status-confirme .card-header {
-  background-color: #e8dff0; 
-  border-color: #dcd0e7;
-}
-.commande-card.status-pret-a-livrer .card-header {
-  background-color: #fcf8e3; 
-  border-color: #f9f2cc;
-}
-.commande-card.status-echange .card-header,
-.commande-card.status-non-confirme .card-header { 
-  background-color: #e4e4e4; 
-  border-color: #dcdcdc;
-}
-.commande-card.status-envoye .card-header,
-.commande-card.status-annule .card-header {
-  background-color: #f8d7da; 
-  border-color: #f5c6cb;
-}
-
+/* Couleurs de fond pour le .card-header (inchangé) */
+.commande-card.status-confirme .card-header { background-color: var(--status-confirme-bg); }
+.commande-card.status-en-preparation .card-header { background-color: var(--status-en-preparation-bg); }
+.commande-card.status-non-confirme .card-header { background-color: var(--status-non-confirme-bg); }
+.commande-card.status-annule .card-header { background-color: var(--status-annule-bg); }
+.commande-card.status-pret-a-livrer .card-header { background-color: var(--status-pret-a-livrer-bg); }
+.commande-card.status-echange .card-header { background-color: var(--status-echange-bg); }
+.commande-card.status-envoye .card-header { background-color: var(--status-envoye-bg); }
 
 .card-header h3 {
   margin: 0;
-  font-size: 1.1rem;
-  color: #333;
-  word-break: break-word; 
+  font-size: 1.2rem;
+  color: var(--text-color);
+  font-weight: 600;
 }
 
 .card-header p {
-  margin: 0 0 0 10px; 
+  margin: 0 0 0 12px;
   font-size: 0.9rem;
-  color: #666;
-  white-space: nowrap; 
+  color: var(--light-text-color);
+  font-weight: 500;
 }
 
 .card-body {
-  padding: 15px;
-  flex-grow: 1; 
+  padding: 18px;
+  flex-grow: 1;
 }
 
 .card-body p {
   margin: 0 0 10px 0;
   font-size: 0.95rem;
-  line-height: 1.4;
-  color: #555;
-  word-break: break-word; 
+  line-height: 1.5;
+  color: #444;
+  word-break: break-word;
 }
-.card-body p strong {
-  color: #333;
-  font-weight: 600; 
-}
-.card-body p:last-child {
-    margin-bottom: 0;
-}
-
-.card-body p small strong {
-    color: #444; 
-    font-weight: 600;
-}
+.card-body p strong { color: var(--text-color); font-weight: 600; }
+.card-body p:last-child { margin-bottom: 0; }
+.card-body p small { font-size: 0.85rem; color: #777; }
+.card-body p small strong { color: #555; font-weight: 600; }
 
 .card-footer {
-  padding: 10px 15px;
-  border-top: 1px solid #eee; 
+  padding: 12px 18px;
+  /* MODIFIÉ : Pas de bordure, le fond suffit */
+  border-top: none; 
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #f9f9f9; 
-  border-bottom-left-radius: 8px; 
-  border-bottom-right-radius: 8px;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  background-color: #fafafa; /* Fond légèrement différent du header */
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
 }
 
 .card-footer small {
   font-size: 0.8rem;
-  color: #777;
+  color: #888;
 }
 
-/* Style du <select> neutre (inchangé) */
+/* ---
+     STYLE DU SELECT (LA 2ÈME GROSSE MODIFICATION)
+     On le rend discret : plus de fond coloré, juste du texte coloré.
+--- */
 .status-select {
-  padding: 4px 10px;
-  border-radius: 5px; 
-  font-size: 0.8rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
   font-weight: 600;
   text-transform: capitalize;
-  border: 1px solid #ccc; 
-  background-color: #f0f0f0; 
-  color: #333; 
+  border: 1px solid var(--border-color); /* Bordure simple */
+  background-color: #fff; /* Fond blanc */
+  color: var(--text-color); /* Texte noir par défaut */
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  padding-right: 25px; 
-  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%F2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.6-3.6%205.4-7.9%205.4-12.9%200-5-1.8-9.2-5.4-12.7z%22%2F%3E%3C%2Fsvg%3E');
+  padding-right: 28px;
+  /* Flèche grise unifiée */
+  background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20fill%3D%22%23666666%22%20d%3D%22M7%2010l5%205%205-5z%22%2F%3E%3C%2Fsvg%3E');
   background-repeat: no-repeat;
-  background-position: right 8px top 50%;
-  background-size: .5em auto;
+  background-position: right 8px center;
+  background-size: .7em auto;
   cursor: pointer;
+  transition: all 0.2s ease-in-out;
 }
+
 .status-select:hover {
-  background-color: #e9e9e9;
-  border-color: #bbb;
+  background-color: #f9f9f9;
+  border-color: #a0a0a0;
 }
 .status-select:disabled {
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.6;
+  background-color: #eee;
 }
 
+/* Couleurs de TEXTE (et bordure) pour le select */
+.status-select.status-confirme {
+  color: var(--status-confirme-select);
+  border-color: var(--status-confirme-bg);
+}
+.status-select.status-en-preparation {
+  color: var(--status-en-preparation-select);
+  border-color: var(--status-en-preparation-bg);
+}
+.status-select.status-non-confirme {
+  color: var(--status-non-confirme-select);
+  border-color: var(--status-non-confirme-bg);
+}
+.status-select.status-annule {
+  color: var(--status-annule-select);
+  border-color: var(--status-annule-bg);
+}
+.status-select.status-pret-a-livrer {
+  color: var(--status-pret-a-livrer-select);
+  border-color: var(--status-pret-a-livrer-bg);
+}
+.status-select.status-echange {
+  color: var(--status-echange-select);
+  border-color: var(--status-echange-border);
+}
+.status-select.status-envoye {
+  color: var(--status-envoye-select);
+  border-color: var(--status-envoye-border);
+}
+
+
 /* Styles responsives (inchangés) */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .commandes-filters-bar {
-      flex-direction: column; 
-      gap: 10px;
+      flex-direction: column;
+      gap: 15px;
   }
   .commandes-search-input,
   .commandes-status-filter {
-      min-width: 100%; 
+      min-width: 100%;
   }
   .commandes-list-container {
-     grid-template-columns: 1fr;
+      grid-template-columns: 1fr;
   }
   .commandes-page-content {
-     padding: 10px;
+      padding: 15px;
+  }
+  .commandes-page-content h1 {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+      margin-left: 0;
+      text-align: center; /* Recentrer pour les petits écrans */
   }
   .card-header, .card-body, .card-footer {
-     padding: 12px;
+      padding: 15px;
   }
 }

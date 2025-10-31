@@ -1,46 +1,240 @@
-/* src/pages/HomePage.css */
+/* src/pages/HomePage.css (Nettoyé des icônes) */
 
 .home-page-content {
-  text-align: center; /* Centre tout */
+  text-align: center;
 }
-
 .home-page-content h1 {
   margin-bottom: 10px;
+  font-size: 1.8rem;
 }
-
 .home-page-content p {
   color: var(--text-light);
   margin-bottom: 30px;
 }
 
-.balance-display {
-  background-color: var(--background-color);
-  padding: 20px 30px;
+/* --- 1. Grille des Chiffres --- */
+.home-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+  text-align: center; 
+}
+.stat-card {
+  background-color: var(--card-background);
+  padding: 25px;
   border-radius: 12px;
-  display: inline-block;
-  margin-bottom: 30px;
+  box-shadow: var(--shadow-light);
   border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
 }
-
-.balance-display span:first-child {
-  font-size: 1.2rem;
-  color: var(--text-light);
-  margin-right: 15px;
+.stat-card.primary-stat {
+  transform: scale(1.05); 
+  background-color: #ffffff;
+  border-color: var(--accent-color); 
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); 
+  z-index: 10;
 }
-
-.balance-value {
-  font-size: 2.2rem;
+.stat-card:hover:not(.primary-stat) {
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-3px) scale(1.02);
+}
+.stat-card.primary-stat:hover {
+  transform: translateY(-3px) scale(1.08);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+.stat-card .balance-value {
+  font-size: 2.5rem; 
   font-weight: 700;
+  display: block;
+  margin-bottom: 10px;
 }
-
-.balance-value.positive { color: var(--accent-color); }
-.balance-value.negative { color: var(--danger-color); }
-
+.stat-card .balance-value.positive { color: var(--accent-color); }
+.stat-card .balance-value.negative { color: var(--danger-color); }
+.stat-card h2 {
+  font-size: 1.1rem; 
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: var(--text-light); 
+  font-weight: 500;
+}
+.stat-card p {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 20px;
+  flex-grow: 1; 
+}
 .link-transactions {
   display: block;
-  margin-top: 20px;
   color: var(--accent-color);
   font-weight: 600;
   text-decoration: none;
+  padding-top: 15px;
+  margin-top: auto; 
+  border-top: 1px solid var(--border-color);
 }
 .link-transactions:hover { text-decoration: underline; }
+
+
+/* --- 2. Accès Rapide (On le cache) --- */
+.quick-access {
+  display: none;
+}
+
+/* --- 3. Aperçu en Direct --- */
+.live-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+  gap: 25px;
+  margin-top: 30px;
+  text-align: left;
+}
+.preview-card {
+  background: var(--card-background);
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: var(--shadow-light);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+.preview-card h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  color: var(--text-color);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+.preview-card .no-data {
+  color: var(--text-light);
+  font-style: italic;
+  text-align: center;
+  padding: 20px 0;
+  flex-grow: 1; 
+}
+
+/* Style commun à toutes les listes */
+.top-list,
+.home-transaction-list,
+.home-stock-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1; 
+}
+
+.top-list li,
+.home-transaction-list li,
+.home-stock-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 5px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
+}
+.top-list li:hover,
+.home-transaction-list li:hover,
+.home-stock-list li:hover {
+  background-color: #fcfcfc;
+}
+.top-list li:last-child,
+.home-transaction-list li:last-child,
+.home-stock-list li:last-child {
+  border-bottom: none;
+}
+
+/* Style pour Top 3 Ventes (SANS trophées) */
+.top-list .top-name {
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.top-list .top-count {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--accent-color);
+  background-color: #e8f5e9;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+/* Les ::before pour les trophées ont été supprimés */
+
+
+/* Style pour Transactions du Jour */
+.home-transaction-list .tx-desc {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+  display: flex;
+  align-items: center;
+}
+.home-transaction-list li.revenu::before {
+  content: '⬆';
+  color: var(--accent-color);
+  margin-right: 10px;
+  font-weight: bold;
+}
+.home-transaction-list li.depense::before {
+  content: '⬇';
+  color: var(--danger-color);
+  margin-right: 10px;
+  font-weight: bold;
+}
+.home-transaction-list .tx-montant.revenu {
+  font-weight: 600;
+  color: var(--accent-color);
+  white-space: nowrap;
+}
+.home-transaction-list .tx-montant.depense {
+  font-weight: 600;
+  color: var(--danger-color);
+  white-space: nowrap;
+}
+
+/* Style pour Stock Faible (en rouge) */
+.home-stock-list li::before {
+  content: '⚠️';
+  margin-right: 10px;
+  font-size: 1rem;
+}
+.home-stock-list .stock-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+}
+.home-stock-list .stock-qty-low {
+  font-weight: 700;
+  color: var(--danger-color); 
+  background-color: #ffebee; 
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+
+/* Responsive */
+@media (max-width: 900px) {
+  .home-stats-grid {
+    grid-template-columns: 1fr; 
+    gap: 20px;
+  }
+  .stat-card.primary-stat {
+    transform: scale(1);
+    margin: 0; 
+    order: -1;
+  }
+  .stat-card.primary-stat:hover {
+    transform: translateY(-3px) scale(1);
+  }
+  .live-preview-grid {
+    grid-template-columns: 1fr;
+  }
+}

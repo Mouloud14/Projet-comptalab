@@ -1,6 +1,3 @@
-// comtalab/index.js (Version complète Multi-Utilisateurs)
-
-// 1. Importer les modules
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
@@ -101,6 +98,7 @@ CREATE TABLE IF NOT EXISTS stock_items (
   couleur TEXT,
   style TEXT,
   quantite INTEGER NOT NULL DEFAULT 0,
+  prix REAL,
   user_id INTEGER NOT NULL
 );
 `;
@@ -275,23 +273,38 @@ app.get('/api/stock', authenticateToken, (req, res) => {
   });
 });
 
+// ... dans la section API STOCK ...
+
+// comtalab/index.js
+
 app.post('/api/stock', authenticateToken, (req, res) => {
   const userId = req.user.id;
   console.log(`--- POST /api/stock (User ${userId}) ---`, req.body);
   if (!db) return res.status(503).json({ error: "Service de base de données non disponible."});
-  const { nom, taille, couleur, style } = req.body;
   
-  if (!nom || !couleur || req.body.quantite === undefined || isNaN(parseInt(req.body.quantite)) || parseInt(req.body.quantite) < 0) {
+  const { nom, taille, couleur, style, prix } = req.body; 
+
+  // --- VALIDATION MODIFIÉE (Couleur n'est plus requise ici) ---
+  if (!nom || req.body.quantite === undefined || isNaN(parseInt(req.body.quantite)) || parseInt(req.body.quantite) < 0) {
     console.warn("POST /api/stock: Données invalides reçues.");
-    return res.status(400).json({ error: 'Données invalides : nom, couleur et quantité (>= 0) sont requis.' });
+    return res.status(400).json({ error: 'Données invalides : nom et quantité (>= 0) sont requis.' });
   }
+  // --- FIN VALIDATION ---
+
   const quantiteParsed = parseInt(req.body.quantite);
   const tailleFinal = taille ? taille : null;
+  const couleurFinal = couleur ? couleur : null; // <-- Permet null
   const styleFinal = style ? style : null;
 
-  // Ajout de "user_id" = ? à la vérification
-  const sqlCheck = 'SELECT "id", "quantite" FROM "stock_items" WHERE "nom" = ? AND "couleur" = ? AND ("taille" = ? OR ("taille" IS NULL AND ? IS NULL)) AND ("style" = ? OR ("style" IS NULL AND ? IS NULL)) AND "user_id" = ?';
-  const paramsCheck = [nom, couleur, tailleFinal, tailleFinal, styleFinal, styleFinal, userId];
+  let prixFinal = null;
+  if (prix !== undefined && prix !== null) {
+    prixFinal = parseFloat(prix);
+    if (isNaN(prixFinal)) prixFinal = 0;
+  }
+  
+  // MODIFIÉ : Gère 'couleurFinal' IS NULL
+  const sqlCheck = 'SELECT "id", "quantite" FROM "stock_items" WHERE "nom" = ? AND ("couleur" = ? OR ("couleur" IS NULL AND ? IS NULL)) AND ("taille" = ? OR ("taille" IS NULL AND ? IS NULL)) AND ("style" = ? OR ("style" IS NULL AND ? IS NULL)) AND "user_id" = ?';
+  const paramsCheck = [nom, couleurFinal, couleurFinal, tailleFinal, tailleFinal, styleFinal, styleFinal, userId];
 
   console.log("Exécution SQL Check:", sqlCheck, paramsCheck);
 
@@ -302,30 +315,29 @@ app.post('/api/stock', authenticateToken, (req, res) => {
     }
     if (row) {
       const nouvelleQuantite = row.quantite + quantiteParsed;
-      // La mise à jour se fait par ID, donc pas besoin de user_id ici (on sait déjà que c'est le bon)
-      const sqlUpdate = `UPDATE "stock_items" SET "quantite" = ? WHERE "id" = ?`;
-      console.log("Exécution SQL Update:", sqlUpdate, [nouvelleQuantite, row.id]);
-      db.run(sqlUpdate, [nouvelleQuantite, row.id], function (errUpdate) {
+      const sqlUpdate = `UPDATE "stock_items" SET "quantite" = ?, "prix" = ? WHERE "id" = ?`;
+      console.log("Exécution SQL Update:", sqlUpdate, [nouvelleQuantite, prixFinal, row.id]);
+      
+      db.run(sqlUpdate, [nouvelleQuantite, prixFinal, row.id], function (errUpdate) {
         if (errUpdate) {
           console.error("Erreur DB POST /api/stock (update):", errUpdate.message);
           return res.status(500).json({ error: "Erreur serveur lors de la mise à jour de la quantité." });
         }
-        console.log(`POST /api/stock: Article ID ${row.id} mis à jour.`);
-        res.status(200).json({ id: row.id, nom, taille: tailleFinal, couleur, style: styleFinal, quantite: nouvelleQuantite });
+        res.status(200).json({ id: row.id, nom, taille: tailleFinal, couleur: couleurFinal, style: styleFinal, quantite: nouvelleQuantite, prix: prixFinal });
       });
     } else {
-      // Ajout de "user_id" à l'insertion
-      const sqlInsert = `INSERT INTO "stock_items" ("nom", "taille", "couleur", "style", "quantite", "user_id") VALUES (?, ?, ?, ?, ?, ?)`;
-      const paramsInsert = [nom, tailleFinal, couleur, styleFinal, quantiteParsed, userId];
+      // MODIFIÉ : Gère 'couleurFinal'
+      const sqlInsert = `INSERT INTO "stock_items" ("nom", "taille", "couleur", "style", "quantite", "prix", "user_id") VALUES (?, ?, ?, ?, ?, ?, ?)`;
+      const paramsInsert = [nom, tailleFinal, couleurFinal, styleFinal, quantiteParsed, prixFinal, userId];
       console.log("Exécution SQL Insert:", sqlInsert, paramsInsert);
+      
       db.run(sqlInsert, paramsInsert, function (errInsert) {
         if (errInsert) {
           console.error("Erreur DB POST /api/stock (insert):", errInsert.message);
           return res.status(500).json({ error: "Erreur serveur lors de l'ajout de l'article." });
         }
         const newId = this.lastID;
-        console.log(`POST /api/stock: Nouvel article inséré (ID: ${newId}).`);
-        res.status(201).json({ id: newId, nom, taille: tailleFinal, couleur, style: styleFinal, quantite: quantiteParsed });
+        res.status(201).json({ id: newId, nom, taille: tailleFinal, couleur: couleurFinal, style: styleFinal, quantite: quantiteParsed, prix: prixFinal });
       });
     }
   });
@@ -361,18 +373,32 @@ app.put('/api/stock/:id', authenticateToken, (req, res) => {
   });
 });
 
+// comtalab/index.js
+
 app.delete('/api/stock/group', authenticateToken, (req, res) => {
   const userId = req.user.id;
   const { nom, couleur, style } = req.query;
   console.log(`--- DELETE /api/stock/group (User ${userId}) ---`, req.query);
 
   if (!db) return res.status(503).json({ error: "Service de base de données non disponible."});
-  if (!nom || !couleur) { /* ... */ }
+  if (!nom) { return res.status(400).json({ error: "Le paramètre 'nom' est requis." }); }
 
-  // Ajout de "AND user_id = ?"
-  let sql = `DELETE FROM "stock_items" WHERE "nom" = ? AND "couleur" = ? AND "user_id" = ?`;
-  const params = [nom, couleur, userId];
+  let sql = `DELETE FROM "stock_items" WHERE "nom" = ? AND "user_id" = ?`;
+  const params = [nom, userId];
 
+  // --- LOGIQUE CORRIGÉE POUR LA COULEUR ---
+  // Si la couleur est 'null' (envoyée par ton code) ou 'Sans couleur' (envoyée par l'ancien code)
+  if (couleur === 'null' || couleur === 'Sans couleur' || couleur === undefined || couleur === '') {
+    sql += ` AND "couleur" IS NULL`;
+    console.log("Recherche de couleur: NULL");
+  } else {
+    sql += ` AND "couleur" = ?`;
+    params.push(couleur);
+    console.log(`Recherche de couleur: "${couleur}"`);
+  }
+  // --- FIN DE LA CORRECTION ---
+
+  // Logique pour le style (inchangée)
   if (style !== undefined && style !== 'null' && style !== '') {
       sql += ` AND "style" = ?`;
       params.push(style);
@@ -384,7 +410,7 @@ app.delete('/api/stock/group', authenticateToken, (req, res) => {
 
   db.run(sql, params, function (err) {
     if (err) { console.error("Erreur DB DELETE /api/stock/group:", err.message); return res.status(500).json({ error: "Erreur serveur lors de la suppression du groupe." }); }
-    if (this.changes === 0) { console.log(`DELETE /api/stock/group: Aucun article supprimé.`); return res.status(200).json({ message: 'Aucun article correspondant trouvé.' }); }
+    if (this.changes === 0) { console.log(`DELETE /api/stock/group: Aucun article supprimé.`); return res.status(404).json({ message: 'Aucun article correspondant trouvé.' }); }
     console.log(`DELETE /api/stock/group: ${this.changes} article(s) supprimé(s).`);
     res.status(200).json({ message: `Groupe supprimé avec succès (${this.changes} articles).` });
   });
@@ -759,6 +785,49 @@ async function getSheetInfoForUser(userId) {
   };
 }
 
+function normalizeStatus(str) {
+  return (str || '')
+    .trim()
+  	 .toLowerCase()
+  	 .replace(/[àâä]/g, 'a')
+  	 .replace(/[éèêë]/g, 'e') // Gère 'préparation', 'confirmé', 'prêt'
+  	 .replace(/[ôö]/g, 'o')
+  	 .replace(/[îï]/g, 'i')
+  	 .replace(/[ûü]/g, 'u')
+  	 .replace(/ç/g, 'c');
+}
+
+
+function getTodayDateString() {
+  const today = new Date();
+  const d = String(today.getDate()).padStart(2, '0');
+  const m = String(today.getMonth() + 1).padStart(2, '0'); // Mois est 0-indexé
+  const y = today.getFullYear();
+  return `${d}/${m}/${y}`; // Format: 31/10/2025
+}
+
+
+function transformHeaders(headerRow) {
+  return headerRow.map(header =>
+      String(header || '')
+        .trim().toLowerCase().replace(/[\s/()]+/g, '_')
+        .replace(/[éèêë]/g, 'e').replace(/[àâä]/g, 'a').replace(/[îï]/g, 'i')
+        .replace(/[ôö]/g, 'o').replace(/[ûü]/g, 'u').replace(/ç/g, 'c')
+        .replace(/^_+|_+$/g, '').replace(/[^a-z0-9_]/g, '')
+  );
+}
+
+// NOUVEAU : Fonction helper pour convertir un index (0, 1, 2) en Lettre (A, B, C)
+function columnIndexToLetter(index) {
+  let letter = '';
+  let temp = index;
+  while (temp >= 0) {
+    letter = String.fromCharCode((temp % 26) + 65) + letter;
+    temp = Math.floor(temp / 26) - 1;
+  }
+  return letter;
+}
+
 app.get('/api/sheet-data', authenticateToken, async (req, res) => {
     console.log(`--- GET /api/sheet-data (User ${req.user.id}) ---`);
     if (!sheets) { /* ... (inchangé) ... */ }
@@ -799,14 +868,15 @@ app.get('/api/sheet-data', authenticateToken, async (req, res) => {
 
 app.put('/api/sheet-data/update-status', authenticateToken, async (req, res) => {
     console.log(`--- PUT /api/sheet-data/update-status (User ${req.user.id}) ---`);
-    if (!sheets) { /* ... (inchangé) ... */ }
+    if (!sheets) { return res.status(503).json({ error: 'Service Google Sheets non disponible.' }); }
     
     const { rowIndex, newStatus } = req.body;
-    if (!rowIndex || typeof rowIndex !== 'number' || rowIndex < 2 || !newStatus || typeof newStatus !== 'string') { /* ... (inchangé) ... */ }
+    if (!rowIndex || typeof rowIndex !== 'number' || rowIndex < 2 || !newStatus || typeof newStatus !== 'string') { 
+      return res.status(400).json({ error: 'Index de ligne (rowIndex >= 2) et nouveau statut (newStatus) requis.' }); 
+    }
 
     let sheetInfo;
     try {
-      // On récupère l'ID et le nom du premier onglet
       sheetInfo = await getSheetInfoForUser(req.user.id);
     } catch (err) {
       if (err.message.includes('Aucun lien')) return res.status(404).json({ error: err.message });
@@ -814,13 +884,50 @@ app.put('/api/sheet-data/update-status', authenticateToken, async (req, res) => 
       return res.status(500).json({ error: err.message });
     }
 
-    // On construit le range dynamiquement
-    const rangeToUpdate = `'${sheetInfo.sheetName}'!${STATUS_COLUMN_LETTER}${rowIndex}`;
+    // --- NOUVELLE LOGIQUE DYNAMIQUE ---
+    let dynamicStatusColumnLetter;
+    try {
+      // 1. Lire la première ligne (les en-têtes)
+      const headerRange = `'${sheetInfo.sheetName}'!1:1`;
+      console.log(`Lecture des en-têtes (Range: ${headerRange}) pour trouver la colonne état...`);
+      const headerResponse = await sheets.spreadsheets.values.get({
+        spreadsheetId: sheetInfo.spreadsheetId,
+        range: headerRange,
+      });
+
+      const headers = headerResponse.data.values[0];
+      if (!headers || headers.length === 0) {
+        throw new Error("La première ligne (en-têtes) du Sheet est vide.");
+      }
+
+      // 2. Transformer les en-têtes et trouver l'index
+      const transformedHeaders = transformHeaders(headers);
+      const statusKey = 'etat_de_livraison';
+      const statusIndex = transformedHeaders.findIndex(h => h === statusKey);
+
+      if (statusIndex === -1) {
+        console.error(`Colonne "${statusKey}" non trouvée dans les en-têtes:`, transformedHeaders);
+        throw new Error(`Colonne "etat_de_livraison" non trouvée dans votre Google Sheet.`);
+      }
+
+      // 3. Convertir l'index (ex: 7) en lettre (ex: 'H')
+      dynamicStatusColumnLetter = columnIndexToLetter(statusIndex);
+      console.log(`La colonne "${statusKey}" a été trouvée à l'index ${statusIndex} (Colonne ${dynamicStatusColumnLetter})`);
+
+    } catch (err) {
+      console.error("Erreur lors de la recherche de la colonne état:", err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    // --- FIN DE LA LOGIQUE DYNAMIQUE ---
+
+
+    // 4. Utiliser la lettre dynamique pour mettre à jour
+    const rangeToUpdate = `'${sheetInfo.sheetName}'!${dynamicStatusColumnLetter}${rowIndex}`;
     console.log(`MàJ cellule: ${rangeToUpdate} (Sheet ID: ${sheetInfo.spreadsheetId}) avec valeur: "${newStatus}"`);
     
     try {
         const response = await sheets.spreadsheets.values.update({ 
-            spreadsheetId: sheetInfo.spreadsheetId, // Utilise l'ID dynamique
+            spreadsheetId: sheetInfo.spreadsheetId, 
             range: rangeToUpdate, // Utilise le range dynamique
             valueInputOption: 'USER_ENTERED', 
             resource: { values: [[newStatus]] } 
@@ -829,14 +936,569 @@ app.put('/api/sheet-data/update-status', authenticateToken, async (req, res) => 
         res.status(200).json({ message: 'Statut mis à jour avec succès.' });
     } catch (err) {
         console.error(`Erreur API Google Sheets PUT update-status (Range: ${rangeToUpdate}):`, err.message);
-        if (err.message.includes('Unable to parse range')) {
-          console.error(`--> Erreur: L'onglet "${sheetInfo.sheetName}" n'a pas pu être lu.`);
-          return res.status(400).json({ error: `Erreur: L'onglet "${sheetInfo.sheetName}" est invalide.` });
-        }
         res.status(500).json({ error: 'Impossible de mettre à jour le statut dans Google Sheets.' });
     }
 });
 // --- FIN API Google Sheet ---
+const articleDetails = {
+  'tshirt': { // <-- Clé simplifiée
+    display: 'T-shirt', 
+    aliases: ['t shirt', 't-shirt'], // <-- Synonymes
+    styles: ['oversize', 'oversize premium', 'regular', 'enfant'], 
+    prix: { 'oversize': 950, 'oversize premium': 1150, 'regular': 790, 'enfant': 620 } 
+  },
+  'hoodie': { 
+  	 display: 'Hoodie', 
+  	 aliases: ['sweat'], // <-- Synonyme
+  	 styles: ['premium', 'enfant', 'standard'], // <-- Corrigé (orma premium -> premium)
+  	 prix: { 'premium': 1650, 'enfant': 1300, 'standard': 1260 } 
+  },
+  'jogging': { 
+  	 display: 'Jogging', 
+  	 aliases: [],
+  	 styles: ['oversize elastiqué', 'elastiqué normal', 'open leg'], 
+  	 prix: { 'oversize elastiqué': 1180, 'elastiqué normal': 1200, 'open leg': 1200 } 
+  },
+  'sac a dos': { 
+  	 display: 'Sac à dos', 
+  	 aliases: ['sacados', 'sac à dos'], // <-- Synonymes
+  	 styles: ['standard', 'premium'], 
+  	 prix: { 'standard': 1150, 'premium': 1220 } 
+  },
+  'autre': { 
+  	 display: 'Autre', 
+  	 aliases: [],
+  	 styles: [], 
+  	 prix: {} 
+  }
+};
+
+// 1. LE DICTIONNAIRE DES PRIX (Ta liste)
+const PRIX_WILAYAS = {
+  'adrar': {
+    names: ['adrar', 'أدرار'],
+    prices: { 'a domicile': 1400, 'bureau': 970, 'autre': 970 }
+  },
+  'chlef': {
+    names: ['chlef', 'الشلف'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'laghouat': {
+    names: ['laghouat', 'الأغواط'],
+    prices: { 'a domicile': 950, 'bureau': 620, 'autre': 620 }
+  },
+  'oumelbouaghi': {
+    names: ['oumelbouaghi', 'أم البواقي'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'batna': {
+    names: ['batna', 'باتنة'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'bejaia': {
+    names: ['bejaia', 'بجاية'],
+    prices: { 'a domicile': 750, 'bureau': 520, 'autre': 520 }
+  },
+  'biskra': {
+    names: ['biskra', 'بسكرة'],
+    prices: { 'a domicile': 950, 'bureau': 620, 'autre': 620 }
+  },
+  'bechar': {
+    names: ['bechar', 'بشار'],
+    prices: { 'a domicile': 1100, 'bureau': 720, 'autre': 720 }
+  },
+  'blida': {
+    names: ['blida', 'البليدة'],
+    prices: { 'a domicile': 750, 'bureau': 470, 'autre': 470 }
+  },
+  'bouira': {
+    names: ['bouira', 'البويرة'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'tamanrasset': {
+    names: ['tamanrasset', 'تمنراست'],
+    prices: { 'a domicile': 1500, 'bureau': 1120, 'autre': 1120 }
+  },
+  'tebessa': {
+    names: ['tebessa', 'تبسة'],
+    prices: { 'a domicile': 900, 'bureau': 520, 'autre': 520 }
+  },
+  'tlemcen': {
+    names: ['tlemcen', 'تلمسان'],
+    prices: { 'a domicile': 850, 'bureau': 570, 'autre': 570 }
+  },
+  'tiaret': {
+    names: ['tiaret', 'تيارت'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'tiziouzou': {
+    names: ['tiziouzou', 'tizi ouzou', 'تيزي وزو'], // J'ai ajouté 'tizi ouzou'
+    prices: { 'a domicile': 500, 'bureau': 370, 'autre': 370 }
+  },
+  'alger': {
+    names: ['alger', 'الجزائر'],
+    prices: { 'a domicile': 700, 'bureau': 470, 'autre': 470 }
+  },
+  'djelfa': {
+    names: ['djelfa', 'الجلفة'],
+    prices: { 'a domicile': 950, 'bureau': 620, 'autre': 620 }
+  },
+  'jijel': {
+    names: ['jijel', 'جيجل'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'setif': {
+    names: ['setif', 'سطيف'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'saida': {
+    names: ['saida', 'سعيدة'],
+    prices: { 'a domicile': 850, 'bureau': 570, 'autre': 570 }
+  },
+  'skikda': {
+    names: ['skikda', 'سكيكدة'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'sidibelabbes': {
+    names: ['sidibelabbes', 'sidi bel abbes', 'سيدي بلعباس'], // J'ai ajouté
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'annaba': {
+    names: ['annaba', 'عنابة'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'guelma': {
+    names: ['guelma', 'قالمة'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'constantine': {
+    names: ['constantine', 'قسنطينة'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'medea': {
+    names: ['medea', 'المدية'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'mostaganem': {
+    names: ['mostaganem', 'مستغانم'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'msila': {
+    names: ['msila', 'المسيلة'],
+    prices: { 'a domicile': 850, 'bureau': 570, 'autre': 570 }
+  },
+  'mascara': {
+    names: ['mascara', 'معسكر'],
+    prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'ouargla': {
+    names: ['ouargla', 'ورقلة'],
+  	 prices: { 'a domicile': 950, 'bureau': 670, 'autre': 670 }
+  },
+  'oran': {
+    names: ['oran', 'وهران'],
+  	 prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'elbayadh': {
+    names: ['elbayadh', 'البيض'],
+  	 prices: { 'a domicile': 1050, 'bureau': 670, 'autre': 670 }
+  },
+  'illizi': {
+    names: ['illizi', 'إليزي'],
+  	 prices: { 'a domicile': 0, 'bureau': 0, 'autre': 0 }
+  },
+  'bordjbouarreridj': {
+    names: ['bordjbouarreridj', 'bordj bou arreridj', 'برج بوعريريج'], // J'ai ajouté
+  	 prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'boumerdes': {
+    names: ['boumerdes', 'بومرداس'],
+  	 prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'eltarf': {
+  	 names: ['eltarf', 'الطارف'],
+  	 prices: { 'a domicile': 850, 'bureau': 520, 'autre': 520 }
+  },
+  'tindouf': {
+  	 names: ['tindouf', 'تندوف'],
+  	 prices: { 'a domicile': 0, 'bureau': 0, 'autre': 0 }
+  },
+  'tissemsilt': {
+  	 names: ['tissemsilt', 'تيسمسيلت'],
+  	 prices: { 'a domicile': 900, 'bureau': 520, 'autre': 520 }
+  },
+  'eloued': {
+  	 names: ['eloued', 'el oued', 'الوادي'], // J'ai ajouté
+  	 prices: { 'a domicile': 950, 'bureau': 670, 'autre': 670 }
+  },
+  'khenchela': {
+  	 names: ['khenchela', 'خنشلة'],
+  	 prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'soukahras': {
+  	 names: ['soukahras', 'souk ahras', 'سوق أهراس'], // J'ai ajouté
+  	 prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'tipaza': {
+  	 names: ['tipaza', 'تيبازة'],
+  	 prices: { 'a domicile': 850, 'bureau': 520, 'autre': 520 }
+  },
+  'mila': {
+  	 names: ['mila', 'ميلة'],
+  	 prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'aindefla': {
+  	 names: ['aindefla', 'ain defla', 'عين الدفلى'], // J'ai ajouté
+  	 prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'naama': {
+  	 names: ['naama', 'النعامة'],
+  	 prices: { 'a domicile': 1100, 'bureau': 670, 'autre': 670 }
+  },
+  'aintemouchent': {
+  	 names: ['aintemouchent', 'ain temouchent', 'عين تموشنت'], // J'ai ajouté
+  	 prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'ghardaia': {
+  	 names: ['ghardaia', 'غرداية'],
+  	 prices: { 'a domicile': 950, 'bureau': 670, 'autre': 670 }
+  },
+  'relizane': {
+  	 names: ['relizane', 'غليزان'],
+  	 prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 }
+  },
+  'timimoun': {
+  	 names: ['timimoun', 'تيميمون'],
+  	 prices: { 'a domicile': 1400, 'bureau': 0, 'autre': 0 }
+  },
+  'bordjbadjimokhtar': {
+  	 names: ['bordjbadjimokhtar', 'برج باجي مختار'],
+  	 prices: { 'a domicile': 0, 'bureau': 0, 'autre': 0 }
+  },
+  'ouleddjellal': {
+  	 names: ['ouleddjellal', 'أولاد جلال'],
+  	 prices: { 'a domicile': 950, 'bureau': 620, 'autre': 620 }
+  },
+  'beniabbes': {
+  	 names: ['beniabbes', 'بني عباس'],
+  	 prices: { 'a domicile': 1000, 'bureau': 970, 'autre': 970 }
+  },
+  'insalah': {
+  	 names: ['insalah', 'عين صالح'],
+  	 prices: { 'a domicile': 1500, 'bureau': 0, 'autre': 0 }
+  },
+  'inguezzam': {
+  	 names: ['inguezzam', 'عين قزام'],
+  	 prices: { 'a domicile': 1500, 'bureau': 0, 'autre': 0 }
+  },
+  'touggourt': {
+  	 names: ['touggourt', 'تقرت'],
+  	 prices: { 'a domicile': 950, 'bureau': 670, 'autre': 670 }
+  },
+  'djanet': {
+  	 names: ['djanet', 'جانت'],
+  	 prices: { 'a domicile': 0, 'bureau': 0, 'autre': 0 }
+  },
+  'mghair': {
+  	 names: ['mghair', 'المغير'],
+  	 prices: { 'a domicile': 950, 'bureau': 0, 'autre': 0 }
+  },
+  'meniaa': {
+  	 names: ['meniaa', 'المنيعة'],
+  	 prices: { 'a domicile': 1000, 'bureau': 0, 'autre': 0 }
+  },
+  'defaut': {
+    names: [], // Pas de nom pour le défaut
+  	 prices: { 'a domicile': 650, 'bureau': 600, 'autre': 600 }
+  }
+};
+
+const BUNDLES = {
+  'ensemble_premium': {
+    names: ['ensemble premium', 'pack premium'], // Mots-clés pour ce lot
+    cost: 1650 + 1200 // hoodie premium (1650) + jogging (1200)
+  },
+  'ensemble_standard': {
+    names: ['ensemble', 'pack standard', 'ensemble standard'], // 'ensemble' seul = standard
+    cost: 1260 + 1200 // hoodie standard (1260) + jogging (1200)
+  }
+};
+
+
+
+// comtalab/index.js
+
+// (Assure-toi que les dictionnaires 'articleDetails' et 'BUNDLES' sont au-dessus)
+
+// REMPLACE L'ANCIENNE FONCTION 'parseArticleCost' PAR CELLE-CI
+function parseArticleCost(articlesText) {
+  if (!articlesText) return 0;
+  
+  let finalTotalCost = 0;
+  
+  // 1. Nettoyer le texte et remplacer "et" par "+"
+  const cleanedText = articlesText.toLowerCase()
+                                    .replace(/\s+et\s+/g, ' + ') // " et " -> " + "
+                                    .replace(/,/g, ' + ');      // "," -> " + "
+
+  // 2. Séparer les articles
+  const items = cleanedText.split('+');
+
+  // 3. Boucle sur chaque segment (chaque article)
+  for (const itemString of items) {
+    const text = itemString.trim(); 
+    if (text.length === 0) continue;
+
+    let itemCost = 0;
+    let itemFound = false;
+    let quantity = 1; 
+    let textToParse = text;
+
+    // 4. Détecte la quantité (ex: "2 tshirt")
+    const qtyMatch = text.match(/^(\d+)\s*x?\s*/); 
+    if (qtyMatch) {
+      quantity = parseInt(qtyMatch[1], 10) || 1;
+      textToParse = text.substring(qtyMatch[0].length).trim(); 
+    }
+
+    // --- 5. Vérifier les LOTS (Bundles) d'abord ---
+    const bundleKeysSorted = Object.keys(BUNDLES).sort((a, b) => {
+      const longestA = Math.max(...BUNDLES[a].names.map(n => n.length));
+      const longestB = Math.max(...BUNDLES[b].names.map(n => n.length));
+      return longestB - longestA;
+    });
+
+    for (const bundleKey of bundleKeysSorted) {
+      const bundle = BUNDLES[bundleKey];
+      for (const nom of bundle.names) {
+        if (textToParse.includes(nom)) {
+          console.log(`Lot trouvé: "${nom}", Coût: ${bundle.cost}`);
+          itemCost = bundle.cost;
+          itemFound = true;
+          break;
+        }
+      }
+      if (itemFound) break;
+    }
+    
+    if (itemFound) {
+       finalTotalCost += (itemCost * quantity);
+       continue; 
+    }
+
+    // --- 6. Si ce n'est pas un lot, VÉRIFIER LES ARTICLES SIMPLES ---
+    for (const articleKey in articleDetails) {
+      if (articleKey === 'autre') continue;
+      
+      const details = articleDetails[articleKey];
+      let allNames = [articleKey, ...(details.aliases || [])];
+      let articleFoundInLoop = false;
+
+      for (const nom of allNames) {
+        if (textToParse.includes(nom)) {
+          articleFoundInLoop = true;
+          break;
+        }
+      }
+      
+      if (articleFoundInLoop) { // Article trouvé (ex: "hoodie")
+        let styleTrouve = null;
+        let cost = 0;
+        const stylesTries = (details.styles || []).sort((a, b) => b.length - a.length);
+
+        for (const styleKey of stylesTries) {
+          if (textToParse.includes(styleKey)) { 
+            styleTrouve = styleKey;
+            cost = details.prix[styleKey] || 0;
+            break; 
+          }
+        }
+        
+        if (articleKey === 'hoodie' && styleTrouve === 'enfant') {
+           if (textToParse.includes(' s ') || textToParse.includes(' m ') || textToParse.includes(' l ') || textToParse.includes(' xl ') || textToParse.includes(' xxl ')) {
+             cost = 1650;
+           }
+        }
+        
+        // *** MODIFICATION ICI ***
+        // Si aucun style n'a été trouvé, appliquer le prix par défaut
+        if (!styleTrouve) {
+            // CAS SPÉCIAL: Si c'est 'tshirt' sans style, c'est 'regular'
+            if (articleKey === 'tshirt' && details.prix['regular']) {
+                console.log(`Style non trouvé pour "tshirt", utilisation du prix 'regular'`);
+                cost = details.prix['regular'];
+            } 
+            // CAS STANDARD: Si 'standard' existe (pour 'hoodie'), l'utiliser
+            else if (details.prix['standard']) {
+                console.log(`Style non trouvé pour "${textToParse}", utilisation du prix 'standard'`);
+                cost = details.prix['standard'];
+            }
+            // Si aucun style par défaut n'est défini (ex: jogging), le coût restera 0
+        }
+        // *** FIN MODIFICATION ***
+        
+        itemCost = cost;
+        console.log(`Article trouvé: "${articleKey}", Style: "${styleTrouve || (articleKey === 'tshirt' ? 'regular' : 'standard')}", Coût: ${cost}`);
+        break; // On a trouvé le type (hoodie), on arrête de chercher
+      }
+    } // fin boucle articleDetails
+    
+    // 7. Ajoute le coût de cet item au total
+    finalTotalCost += (itemCost * quantity);
+    
+  } // fin de la boucle sur les items (après le '+')
+
+  return finalTotalCost; // Retourne la somme de tous les items
+}
+
+// comtalab/index.js
+
+// REMPLACE l'ancienne route /api/financial-summary par celle-ci
+// comtalab/index.js
+
+// REMPLACE l'ancienne route /api/financial-summary par celle-ci
+app.get('/api/financial-summary', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { filter = 'actifs' } = req.query; 
+
+  console.log(`--- GET /api/financial-summary (User ${userId}, Filtre: ${filter}) ---`);
+  if (!sheets) return res.status(503).json({ error: "Service Google Sheets non disponible." });
+
+  let sheetInfo;
+  let rows;
+
+  // Étape 1: Récupérer les données du Google Sheet
+  try {
+    sheetInfo = await getSheetInfoForUser(userId);
+    const dynamicRangeRead = `'${sheetInfo.sheetName}'!A:J`; 
+    const response = await sheets.spreadsheets.values.get({ 
+      spreadsheetId: sheetInfo.spreadsheetId,
+      range: dynamicRangeRead 
+    });
+    rows = response.data.values;
+    if (!rows || rows.length < 2) {
+  	 	 return res.json({ totalCommandes: 0, totalLivraison: 0, totalCoutArticles: 0, gainPotentiel: 0 });
+  	 }
+  } catch (err) {
+  	 console.error("Erreur API Google Sheets GET (pour summary):", err.message);
+  	 return res.status(500).json({ error: err.message });
+  }
+
+  // Étape 2: Analyser les en-têtes (inchangé)
+  const headers = rows[0];
+  const transformedHeaders = transformHeaders(headers); 
+  const prixIndex = transformedHeaders.indexOf('prix_total');
+  const typeLivraisonIndex = transformedHeaders.indexOf('type_de_livraison');
+  const etatIndex = transformedHeaders.indexOf('etat_de_livraison');
+  const articlesIndex = transformedHeaders.indexOf('articles'); 
+  let adresseIndex = transformedHeaders.indexOf('adresse');
+  if (adresseIndex === -1) {
+      adresseIndex = transformedHeaders.indexOf('wilaya_commune_et_adresse_nom_du_bureau');
+  }
+  
+  if ([prixIndex, typeLivraisonIndex, etatIndex, adresseIndex, articlesIndex].includes(-1)) {
+  	 console.error("Erreur: Colonnes manquantes.");
+  	 return res.status(400).json({ error: 'Colonnes manquantes (prix_total, type_de_livraison, etat_de_livraison, articles ou adresse) dans votre Google Sheet.' });
+  }
+
+  // Étape 3: Calculer les totaux
+  const statutsActifsRaw = ['En préparation', 'Confirmé', 'Prêt à Livrer', 'Echange'];
+  const normalizedStatutsActifs = statutsActifsRaw.map(s => normalizeStatus(s));
+
+  let totalCommandes = 0;
+  let totalLivraison = 0;
+  let totalCoutArticles = 0; 
+  
+  const commandesData = rows.slice(1);
+  const normalizedFilter = normalizeStatus(filter); 
+
+  for (const row of commandesData) {
+  	 const etatRaw = (row[etatIndex] || '');
+  	 const etatNormalized = normalizeStatus(etatRaw); 
+
+  	 // --- LOGIQUE DE FILTRAGE ---
+  	 let doitEtreComptee = false;
+  	 if (normalizedFilter === 'tous') {
+  	 	 if (etatNormalized !== 'annulé' && etatNormalized !== 'non confirmé') { doitEtreComptee = true; }
+  	 } else if (normalizedFilter === 'actifs') {
+  	 	 if (normalizedStatutsActifs.includes(etatNormalized)) { doitEtreComptee = true; }
+  	 } else {
+  	 	 if (etatNormalized === normalizedFilter) { doitEtreComptee = true; }
+  	 }
+  	 if (!doitEtreComptee) continue;
+  	 // --- FIN FILTRAGE ---
+
+  	 // Calculs
+  	 const prix_total = parseFloat(row[prixIndex]) || 0;
+  	 const typeLivraison = (row[typeLivraisonIndex] || 'autre').toLowerCase().trim();
+  	 const adresseText = (row[adresseIndex] || '').toLowerCase(); 
+  	 const articlesText = (row[articlesIndex] || ''); 
+     
+     // *** CORRECTION : LE COÛT EST CALCULÉ UNE SEULE FOIS PAR LIGNE ***
+  	 totalCommandes += prix_total;
+  	 totalCoutArticles += parseArticleCost(articlesText); // <--- Placé ici
+     // *** FIN CORRECTION ***
+
+  	 let coutLivraison = 0;
+  	 if (typeLivraison === 'main a main') {
+  	 	 coutLivraison = 0;
+  	 } else if (typeLivraison === 'a domicile' || typeLivraison === 'bureau') {
+  	 	 coutLivraison = PRIX_WILAYAS.defaut.prices[typeLivraison] || PRIX_WILAYAS.defaut.prices['autre'];
+  	 	 let wilayaTrouvee = false;
+  	 	 for (const wilayaKey in PRIX_WILAYAS) {
+  	 	 	 if (wilayaKey === 'defaut') continue;
+  	 	 	 const wilayaData = PRIX_WILAYAS[wilayaKey];
+  	 	 	 for (const nom of wilayaData.names) {
+  	 	 	 	 if (adresseText.includes(nom)) {
+  	 	 	 	 	 coutLivraison = wilayaData.prices[typeLivraison] || wilayaData.prices['autre'];
+  	 	 	 	 	 wilayaTrouvee = true;
+  	 	 	 	 	 break;
+  	 	 	 	 }
+  	 	 	 }
+  	 	 	 if (wilayaTrouvee) break;
+  	 	 }
+  	 }
+  	 totalLivraison += coutLivraison;
+  }
+  
+  const gainNetPotentiel = totalCommandes - totalLivraison - totalCoutArticles;
+
+  console.log(`Gain Net (Filtre: ${filter}): ${totalCommandes} (Ventes) - ${totalLivraison} (Livraison) - ${totalCoutArticles} (Coût) = ${gainNetPotentiel}`);
+
+  res.json({
+  	 totalCommandes,
+  	 totalLivraison,
+  	 totalCoutArticles,
+  	 gainPotentiel: gainNetPotentiel
+  });
+});
+
+app.get('/api/stock-low', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const alertThreshold = 5; // On cherche les articles avec moins de 5 en stock
+  console.log(`--- GET /api/stock-low (User ${userId}, Seuil: ${alertThreshold}) ---`);
+  if (!db) return res.status(503).json({ error: "Service DB non disponible." });
+
+  // NOUVEAU : On définit ce qu'est un "vêtement"
+  // On utilise les clés de ton objet 'articleDetails'
+  const clothingKeys = ['tshirt', 'hoodie', 'jogging', 'sac a dos'];
+
+  // *** CORRECTION ICI : Requête sur une seule ligne ***
+  const sql = `SELECT id, nom, couleur, taille, style, quantite FROM stock_items WHERE user_id = ? AND quantite < ? AND nom IN (${clothingKeys.map(k => '?').join(',')}) ORDER BY quantite ASC LIMIT 5`;
+
+
+  const params = [userId, alertThreshold, ...clothingKeys];
+
+  db.all(sql, params, (err, rows) => {
+  	 if (err) {
+  	 	 console.error("Erreur DB GET /api/stock-low:", err.message);
+  	 	 return res.status(500).json({ error: err.message });
+  	 }
+  	 console.log(`Stock faible trouvé: ${rows.length} articles.`);
+  	 res.json(rows || []);
+  });
+});
+
 
 app.get('/api/sheet-data', authenticateToken, async (req, res) => {
     console.log(`--- GET /api/sheet-data (User ${req.user.id}) ---`);
@@ -903,8 +1565,198 @@ app.put('/api/sheet-data/update-status', authenticateToken, async (req, res) => 
         res.status(500).json({ error: 'Impossible de mettre à jour le statut dans Google Sheets.' });
 S   }
 });
-// --- FIN API Google Sheet ---
 
+// comtalab/index.js
+
+// comtalab/index.js
+
+// comtalab/index.js
+
+// REMPLACE l'ancienne route /api/dashboard-summary par celle-ci
+app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  console.log(`--- GET /api/dashboard-summary (User ${userId}) ---`);
+  if (!db || !sheets) return res.status(503).json({ error: "Services non disponibles." });
+
+  let totalStockValue = 0;
+  let totalPotentialGain = 0; 
+  const salesCounts = {};
+  const wilayaSalesCounts = {}; 
+
+  try {
+    // --- 1. Calculer la Valeur Totale du Stock (depuis SQLite) ---
+    const stockSql = `SELECT SUM(quantite * prix) as totalValue FROM stock_items WHERE user_id = ?`;
+    const stockData = await new Promise((resolve, reject) => {
+      db.get(stockSql, [userId], (err, row) => {
+        if (err) return reject(new Error(`Erreur DB Stock: ${err.message}`));
+    	 resolve(row);
+      });
+    });
+  	 // (Ton log 'Stock=0' vient d'ici, vérifie que tu as des articles avec un prix > 0 dans ta table 'stock_items')
+    totalStockValue = stockData.totalValue || 0; 
+
+    // --- 2. Lire le Google Sheet pour les Gains et le Top 5 ---
+    const sheetInfo = await getSheetInfoForUser(userId);
+    const dynamicRangeRead = `'${sheetInfo.sheetName}'!A:J`; 
+    const response = await sheets.spreadsheets.values.get({ 
+      spreadsheetId: sheetInfo.spreadsheetId,
+      range: dynamicRangeRead 
+    });
+    
+    const rows = response.data.values;
+
+    if (!rows || rows.length < 2) {
+  	 	 return res.json({ totalStockValue, todaysPotentialGain: 0, topCategories: [], topWilayas: [] });
+  	 }
+
+    // Analyser les en-têtes
+    const headers = rows[0];
+    const transformedHeaders = transformHeaders(headers);
+    const prixIndex = transformedHeaders.indexOf('prix_total');
+    const typeLivraisonIndex = transformedHeaders.indexOf('type_de_livraison');
+    const etatIndex = transformedHeaders.indexOf('etat_de_livraison');
+    const articlesIndex = transformedHeaders.indexOf('articles'); 
+    const dtfIndex = transformedHeaders.indexOf('dtf');
+  	 // (dateCommandeIndex n'est plus nécessaire)
+    let adresseIndex = transformedHeaders.indexOf('adresse');
+    if (adresseIndex === -1) {
+        adresseIndex = transformedHeaders.indexOf('wilaya_commune_et_adresse_nom_du_bureau');
+    }
+
+    if ([prixIndex, typeLivraisonIndex, etatIndex, adresseIndex, articlesIndex].includes(-1)) {
+    	 console.error("Avertissement Dashboard: Colonnes manquantes.");
+    } else {
+    	 
+    	 // Statuts pour le gain (Confirmé, Prêt à livrer) - SANS ACCENTS
+    	 const statutsGain = ['confirme', 'pret a livrer']; 
+
+    	 let totalCommandesGain = 0, totalLivraisonGain = 0, totalCoutArticlesGain = 0, totalDTFGain = 0;
+    	 
+    	 const commandesData = rows.slice(1);
+
+    	 for (const row of commandesData) {
+    	 	 const etatRaw = (row[etatIndex] || '');
+    	 	 const etatNormalized = normalizeStatus(etatRaw);
+    	 	 const adresseText = (row[adresseIndex] || '').toLowerCase(); 
+    	 	 
+    	 	 // --- Comptage (Top 3 et Top 5) ---
+    	 	 if (etatNormalized !== 'annulé' && etatNormalized !== 'non confirmé') {
+    	 	 	 const articlesText = (row[articlesIndex] || '').toLowerCase();
+    	 	 	 let articleCompté = false;
+    	 	 	 
+    	 	 	 for (const bundleKey in BUNDLES) {
+    	 	 	 	 for (const nom of BUNDLES[bundleKey].names) {
+    	                   if (articlesText.includes(nom)) {
+                            salesCounts[bundleKey] = (salesCounts[bundleKey] || 0) + 1;
+                            articleCompté = true; break;
+                        }
+                      }
+                      if (articleCompté) break;
+                  }
+
+    	             if (!articleCompté) {
+    	                 for (const articleKey in articleDetails) {
+    	                     if (articleKey === 'autre') continue;
+    	                     let allNames = [articleKey, ...articleDetails[articleKey].aliases];
+    	                     for (const nom of allNames) {
+    	                         if (articlesText.includes(nom)) {
+    	                             salesCounts[articleKey] = (salesCounts[articleKey] || 0) + 1;
+                                  articleCompté = true; break;
+                              }
+                          }
+                          if (articleCompté) break;
+    	                 }
+    	             }
+    	             
+    	             let wilayaTrouvee = false;
+    	             for (const wilayaKey in PRIX_WILAYAS) {
+  	 	               if (wilayaKey === 'defaut') continue;
+  	 	               const wilayaData = PRIX_WILAYAS[wilayaKey];
+  	 	               for (const nom of wilayaData.names) {
+  	                       if (adresseText.includes(nom)) {
+  	                           wilayaSalesCounts[wilayaKey] = (wilayaSalesCounts[wilayaKey] || 0) + 1;
+  	                           wilayaTrouvee = true; break;
+    	                   }
+    	                 }
+    	                 if (wilayaTrouvee) break;
+    	             }
+    	             if (!wilayaTrouvee && adresseText.length > 2) { 
+    	                 wilayaSalesCounts['inconnu'] = (wilayaSalesCounts['inconnu'] || 0) + 1;
+    	             }
+    	         }
+
+    	         // --- Calcul du "Gain" (MODIFIÉ) ---
+    	         // On ne vérifie plus la date, juste le statut
+    	         if (statutsGain.includes(etatNormalized)) {
+    	             const prix_total = parseFloat(row[prixIndex]) || 0;
+    	             const typeLivraison = (row[typeLivraisonIndex] || 'autre').toLowerCase().trim();
+    	             const articlesText = (row[articlesIndex] || ''); 
+    	             const dtfValue = (dtfIndex !== -1) ? (parseFloat(row[dtfIndex]) || 0) : 0;
+
+    	             totalCommandesGain += prix_total;
+    	             totalCoutArticlesGain += parseArticleCost(articlesText); 
+    	             totalDTFGain += dtfValue;
+
+    	             let coutLivraison = 0;
+  	 	             if (typeLivraison === 'main a main') {
+    	                 coutLivraison = 0;
+    	             } else if (typeLivraison === 'a domicile' || typeLivraison === 'bureau') {
+             // ... (logique de livraison inchangée) ...
+             coutLivraison = PRIX_WILAYAS.defaut.prices[typeLivraison] || PRIX_WILAYAS.defaut.prices['autre'];
+             let wilayaTrouvee = false;
+             for (const wilayaKey in PRIX_WILAYAS) {
+               if (wilayaKey === 'defaut') continue;
+               const wilayaData = PRIX_WILAYAS[wilayaKey];
+               for (const nom of wilayaData.names) {
+                 if (adresseText.includes(nom)) {
+                   coutLivraison = wilayaData.prices[typeLivraison] || wilayaData.prices['autre'];
+                   wilayaTrouvee = true;
+                   break;
+                 }
+               }
+               if (wilayaTrouvee) break;
+             }
+  	 	             }
+    	             totalLivraisonGain += coutLivraison;
+    	         }
+    	 }
+    	 totalPotentialGain = totalCommandesGain - totalLivraisonGain - totalCoutArticlesGain - totalDTFGain;
+     }
+    
+    // --- 3. Finaliser le Top 3 (inchangé) ---
+    const topCategories = Object.entries(salesCounts)
+    	 .sort(([, countA], [, countB]) => countB - countA) 
+         .slice(0, 3) 
+    	 .map(([key, count]) => {
+    	 	 let displayName = key;
+    	 	 if (BUNDLES[key]) { displayName = BUNDLES[key].names[0]; } 
+    	 	 else if (articleDetails[key]) { displayName = articleDetails[key].display; }
+    	 	 return { name: displayName, count };
+    	 });
+    	 
+    // --- 4. Finaliser le Top 5 Wilayas (inchangé) ---
+    const topWilayas = Object.entries(wilayaSalesCounts)
+    	 .sort(([, countA], [, countB]) => countB - countA)
+    	 .slice(0, 5) 
+    	 .map(([key, count]) => {
+    	 	 const displayName = key.charAt(0).toUpperCase() + key.slice(1);
+    	 	 return { name: displayName, count };
+    	 });
+
+    // --- 5. Envoyer la réponse complète ---
+    console.log(`Dashboard Summary: Stock=${totalStockValue}, Gain (Confirmé/Prêt)=${totalPotentialGain}, Top 3=${JSON.stringify(topCategories)}, Top Wilayas=${JSON.stringify(topWilayas)}`);
+    res.json({
+    	 totalStockValue,
+    	 todaysPotentialGain: totalPotentialGain, // On garde le nom de variable
+    	 topCategories,
+    	 topWilayas 
+    });
+
+  } catch (err) {
+    console.error("Erreur GET /api/dashboard-summary:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // --- Démarrage du Serveur ---
 initializeSheetsClient().then(() => {
