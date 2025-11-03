@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS stock_items (
             if (err) { return console.error("Erreur création/vérification table stock_items:", err.message); }
             console.log("Table 'stock_items' prête (avec user_id).");
         });
+        
 
 // 3. Commandes (CODE CORRECT avec user_id)
 const sqlCreateTableCommandes = `
@@ -160,13 +161,23 @@ CREATE TABLE IF NOT EXISTS utilisateurs (
                             console.log("Utilisateurs déjà présents.");
                         }
                     });
+
                 }
             }); // Fin db.run utilisateurs
 
             console.log('Fin de la sérialisation des créations de table.');
 
         }); // Fin de db.serialize
-    }); // Fin connexion DB callback
+    });
+
+
+
+
+
+
+
+
+// Fin connexion DB callback
 } catch (dbError) {
     console.error('*** ERREUR CRITIQUE: Impossible d\'ouvrir la base de données:', dbError.message);
     process.exit(1);
@@ -790,13 +801,32 @@ function normalizeStatus(str) {
     .trim()
   	 .toLowerCase()
   	 .replace(/[àâä]/g, 'a')
-  	 .replace(/[éèêë]/g, 'e') // Gère 'préparation', 'confirmé', 'prêt'
+  	 .replace(/[éèêë]/g, 'e') 
   	 .replace(/[ôö]/g, 'o')
   	 .replace(/[îï]/g, 'i')
   	 .replace(/[ûü]/g, 'u')
   	 .replace(/ç/g, 'c');
 }
 
+function transformHeaders(headerRow) {
+  return (headerRow || []).map(header =>
+  	 String(header || '')
+  	 	 .trim().toLowerCase().replace(/[\s/()]+/g, '_')
+  	 	 .replace(/[éèêë]/g, 'e').replace(/[àâä]/g, 'a').replace(/[îï]/g, 'i')
+  	 	 .replace(/[ôö]/g, 'o').replace(/[ûü]/g, 'u').replace(/ç/g, 'c')
+  	 	 .replace(/^_+|_+$/g, '').replace(/[^a-z0-9_]/g, '')
+  );
+}
+
+function columnIndexToLetter(index) {
+  let letter = '';
+  let temp = index;
+  while (temp >= 0) {
+  	 letter = String.fromCharCode((temp % 26) + 65) + letter;
+  	 temp = Math.floor(temp / 26) - 1;
+  }
+  return letter;
+}
 
 function getTodayDateString() {
   const today = new Date();
@@ -805,28 +835,458 @@ function getTodayDateString() {
   const y = today.getFullYear();
   return `${d}/${m}/${y}`; // Format: 31/10/2025
 }
+// comtalab/index.js
 
+// (Ton dictionnaire PRIX_WILAYAS, articleDetails, BUNDLES, etc. sont au-dessus et ne changent pas)
+// (Tes helpers parseArticleCost, normalizeStatus, etc. ne changent pas)
 
-function transformHeaders(headerRow) {
-  return headerRow.map(header =>
-      String(header || '')
-        .trim().toLowerCase().replace(/[\s/()]+/g, '_')
-        .replace(/[éèêë]/g, 'e').replace(/[àâä]/g, 'a').replace(/[îï]/g, 'i')
-        .replace(/[ôö]/g, 'o').replace(/[ûü]/g, 'u').replace(/ç/g, 'c')
-        .replace(/^_+|_+$/g, '').replace(/[^a-z0-9_]/g, '')
-  );
-}
+// --- API POUR LES RÉSUMÉS FINANCIERS (MODIFIÉE POUR LIRE SQLITE) ---
+app.get('/api/financial-summary', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { filter = 'actifs' } = req.query; 
+  console.log(`--- GET /api/financial-summary (User ${userId}, Filtre: ${filter}) ---`);
+  if (!db) return res.status(503).json({ error: "Service DB non disponible." });
 
-// NOUVEAU : Fonction helper pour convertir un index (0, 1, 2) en Lettre (A, B, C)
-function columnIndexToLetter(index) {
-  let letter = '';
-  let temp = index;
-  while (temp >= 0) {
-    letter = String.fromCharCode((temp % 26) + 65) + letter;
-    temp = Math.floor(temp / 26) - 1;
+  // --- CHANGEMENT MAJEUR : On lit la base de données locale ---
+  let sql = `SELECT prix_total, type_livraison, adresse, articles, etat FROM commandes WHERE user_id = ?`;
+  const params = [userId];
+
+  // Construit la clause WHERE en fonction du filtre
+  const statutsActifsRaw = ['En préparation', 'Confirmé', 'Prêt à Livrer', 'Echange'];
+  const normalizedStatutsActifs = statutsActifsRaw.map(s => normalizeStatus(s));
+  const normalizedFilter = normalizeStatus(filter);
+
+  if (normalizedFilter === 'tous') {
+  	 sql += ` AND etat != 'Annulé' AND etat != 'Non confirmé'`;
+  } else if (normalizedFilter === 'actifs') {
+  	 // Crée des '?' pour chaque statut actif
+  	 sql += ` AND etat IN (${normalizedStatutsActifs.map(() => '?').join(',')})`;
+  	 params.push(...normalizedStatutsActifs);
+  } else {
+  	 sql += ` AND etat = ?`;
+  	 params.push(normalizedFilter); // Le filtre est déjà normalisé (ex: 'pret a livrer')
   }
-  return letter;
-}
+  // --- FIN CHANGEMENT MAJEUR ---
+
+  db.all(sql, params, (err, commandes) => {
+  	 if (err) {
+  	 	 console.error("Erreur DB GET /api/financial-summary:", err.message);
+  	 	 return res.status(500).json({ error: err.message });
+  	 }
+
+  	 if (!commandes || commandes.length === 0) {
+  	 	 return res.json({ totalCommandes: 0, totalLivraison: 0, totalCoutArticles: 0, gainPotentiel: 0 });
+  	 }
+
+  	 // Le reste de la logique de calcul est identique
+  	 let totalCommandes = 0;
+  	 let totalLivraison = 0;
+  	 let totalCoutArticles = 0; 
+  	 
+  	 for (const cmd of commandes) {
+  	 	 const prix_total = parseFloat(cmd.prix_total) || 0;
+  	 	 const typeLivraison = (cmd.type_livraison || 'autre').toLowerCase().trim();
+  	 	 const adresseText = (cmd.adresse || '').toLowerCase(); 
+  	 	 const articlesText = (cmd.articles || ''); // (Doit être du JSON string, mais le parser s'en charge)
+     
+  	 	 totalCommandes += prix_total;
+  	 	 totalCoutArticles += parseArticleCost(articlesText); 
+
+  	 	 let coutLivraison = 0;
+  	 	 if (typeLivraison === 'main a main') {
+  	 	 	 coutLivraison = 0;
+  	 	 } else if (typeLivraison === 'a domicile' || typeLivraison === 'bureau') {
+  	 	 	 coutLivraison = PRIX_WILAYAS.defaut.prices[typeLivraison] || PRIX_WILAYAS.defaut.prices['autre'];
+  	 	 	 let wilayaTrouvee = false;
+  	 	 	 for (const wilayaKey in PRIX_WILAYAS) {
+  	 	 	 	 if (wilayaKey === 'defaut') continue;
+  	 	 	 	 const wilayaData = PRIX_WILAYAS[wilayaKey];
+  	 	 	 	 for (const nom of wilayaData.names) {
+  	 	 	 	 	 if (adresseText.includes(nom)) {
+  	 	 	 	 	 	 coutLivraison = wilayaData.prices[typeLivraison] || wilayaData.prices['autre'];
+  	 	 	 	 	 	 wilayaTrouvee = true;
+  	 	 	 	 	 	 break;
+  	 	 	 	 	 }
+  	 	 	 	 }
+  	 	 	 	 if (wilayaTrouvee) break;
+  	 	 	 }
+  	 	 }
+  	 	 totalLivraison += coutLivraison;
+  	 }
+  
+  	 const gainNetPotentiel = totalCommandes - totalLivraison - totalCoutArticles;
+
+  	 console.log(`Gain Net (Filtre: ${filter}): ${totalCommandes} (Ventes) - ${totalLivraison} (Livraison) - ${totalCoutArticles} (Coût) = ${gainNetPotentiel}`);
+
+  	 res.json({
+  	 	 totalCommandes,
+  	 	 totalLivraison,
+  	 	 totalCoutArticles,
+  	 	 gainPotentiel: gainNetPotentiel
+  	 });
+  });
+});
+
+
+// comtalab/index.js
+
+// REMPLACE l'ancienne route /api/dashboard-summary par celle-ci
+app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  console.log(`--- GET /api/dashboard-summary (User ${userId}) ---`);
+  if (!db || !sheets) return res.status(503).json({
+    error: "Services non disponibles."
+  });
+
+  let totalStockValue = 0;
+  let totalPotentialGain = 0; // Renommé (ce n'est plus juste 'aujourd'hui')
+
+  const salesCounts = {};
+  const wilayaSalesCounts = {};
+
+  try {
+    // --- 1. Calculer la Valeur Totale du Stock (depuis SQLite) ---
+    const stockSql = `SELECT SUM(quantite * prix) as totalValue FROM stock_items WHERE user_id = ?`;
+    const stockData = await new Promise((resolve, reject) => {
+      db.get(stockSql, [userId], (err, row) => {
+        if (err) return reject(new Error(`Erreur DB Stock: ${err.message}`));
+        resolve(row);
+      });
+    });
+    totalStockValue = stockData.totalValue || 0;
+
+    // --- 2. Lire le Google Sheet pour les Gains et le Top 5 ---
+    const sheetInfo = await getSheetInfoForUser(userId);
+    const dynamicRangeRead = `'${sheetInfo.sheetName}'!A:J`;
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetInfo.spreadsheetId,
+      range: dynamicRangeRead
+    });
+
+    const rows = response.data.values;
+
+    if (!rows || rows.length < 2) {
+      return res.json({
+        totalStockValue,
+        todaysPotentialGain: 0,
+        topCategories: [],
+        topWilayas: []
+      });
+    }
+
+    // Analyser les en-têtes
+    const headers = rows[0];
+    const transformedHeaders = transformHeaders(headers);
+    const prixIndex = transformedHeaders.indexOf('prix_total');
+    const typeLivraisonIndex = transformedHeaders.indexOf('type_de_livraison');
+    const etatIndex = transformedHeaders.indexOf('etat_de_livraison');
+    const articlesIndex = transformedHeaders.indexOf('articles');
+    const dtfIndex = transformedHeaders.indexOf('dtf');
+    // (dateCommandeIndex n'est plus nécessaire ici)
+    let adresseIndex = transformedHeaders.indexOf('adresse');
+    if (adresseIndex === -1) {
+      adresseIndex = transformedHeaders.indexOf('wilaya_commune_et_adresse_nom_du_bureau');
+    }
+
+    // On vérifie si les colonnes critiques existent
+    if ([prixIndex, typeLivraisonIndex, etatIndex, adresseIndex, articlesIndex].includes(-1)) {
+      console.warn("Avertissement Dashboard: Colonnes manquantes.");
+    } else {
+
+      // Statuts pour le gain (Confirmé, Prêt à livrer) - SANS ACCENTS
+      const statutsGain = ['confirme', 'pret a livrer'];
+
+      let totalCommandesGain = 0,
+        totalLivraisonGain = 0,
+        totalCoutArticlesGain = 0,
+        totalDTFGain = 0;
+
+      const commandesData = rows.slice(1);
+
+      for (const row of commandesData) {
+        const etatNormalized = normalizeStatus(row[etatIndex]);
+        const adresseText = (row[adresseIndex] || '').toLowerCase();
+
+        // --- Comptage (Top 3 et Top 5) ---
+        // (Se fait sur toutes les commandes non-annulées)
+        if (etatNormalized !== 'annulé' && etatNormalized !== 'non confirmé') {
+          const articlesText = (row[articlesIndex] || '').toLowerCase();
+          let articleCompté = false;
+
+          // (Logique de comptage des lots - inchangée)
+          for (const bundleKey in BUNDLES) {
+            const bundle = BUNDLES[bundleKey];
+            for (const nom of bundle.names) {
+              if (articlesText.includes(nom)) {
+                salesCounts[bundleKey] = (salesCounts[bundleKey] || 0) + 1;
+                articleCompté = true;
+                break;
+              }
+            }
+            if (articleCompté) break;
+          }
+
+          // (Logique de comptage des articles - inchangée)
+          if (!articleCompté) {
+            for (const articleKey in articleDetails) {
+              if (articleKey === 'autre') continue;
+              let allNames = [articleKey, ...articleDetails[articleKey].aliases];
+              for (const nom of allNames) {
+                if (articlesText.includes(nom)) {
+                  salesCounts[articleKey] = (salesCounts[articleKey] || 0) + 1;
+                  articleCompté = true;
+                  break;
+                }
+              }
+              if (articleCompté) break;
+            }
+          }
+
+          // (Logique de comptage des wilayas - inchangée)
+          let wilayaTrouvee = false;
+          for (const wilayaKey in PRIX_WILAYAS) {
+            if (wilayaKey === 'defaut') continue;
+            const wilayaData = PRIX_WILAYAS[wilayaKey];
+            for (const nom of wilayaData.names) {
+              if (adresseText.includes(nom)) {
+                wilayaSalesCounts[wilayaKey] = (wilayaSalesCounts[wilayaKey] || 0) + 1;
+                wilayaTrouvee = true;
+                break;
+              }
+            }
+            if (wilayaTrouvee) break;
+          }
+          if (!wilayaTrouvee && adresseText.length > 2) {
+            wilayaSalesCounts['inconnu'] = (wilayaSalesCounts['inconnu'] || 0) + 1;
+          }
+        }
+
+        // --- Calcul du "Gain" (MODIFIÉ) ---
+        // On ne vérifie plus la date, juste le statut
+        if (statutsGain.includes(etatNormalized)) {
+          const prix_total = parseFloat(row[prixIndex]) || 0;
+          const typeLivraison = (row[typeLivraisonIndex] || 'autre').toLowerCase().trim();
+          const articlesText = (row[articlesIndex] || '');
+          const dtfValue = (dtfIndex !== -1) ? (parseFloat(row[dtfIndex]) || 0) : 0;
+
+          totalCommandesGain += prix_total;
+          totalCoutArticlesGain += parseArticleCost(articlesText);
+          totalDTFGain += dtfValue;
+
+          let coutLivraison = 0;
+          if (typeLivraison === 'main a main') {
+            coutLivraison = 0;
+          } else if (typeLivraison === 'a domicile' || typeLivraison === 'bureau') {
+            coutLivraison = PRIX_WILAYAS.defaut.prices[typeLivraison] || PRIX_WILAYAS.defaut.prices['autre'];
+            let wilayaTrouvee = false;
+            for (const wilayaKey in PRIX_WILAYAS) {
+              if (wilayaKey === 'defaut') continue;
+              const wilayaData = PRIX_WILAYAS[wilayaKey];
+              for (const nom of wilayaData.names) {
+                if (adresseText.includes(nom)) {
+                  coutLivraison = wilayaData.prices[typeLivraison] || wilayaData.prices['autre'];
+                  wilayaTrouvee = true;
+                  break;
+                }
+              }
+              if (wilayaTrouvee) break;
+            }
+          }
+          totalLivraisonGain += coutLivraison;
+        }
+      }
+      totalPotentialGain = totalCommandesGain - totalLivraisonGain - totalCoutArticlesGain - totalDTFGain;
+    }
+
+    // --- 3. Finaliser le Top 3 (inchangé) ---
+    const topCategories = Object.entries(salesCounts)
+      .sort(([, countA], [, countB]) => countB - countA)
+      .slice(0, 3)
+      .map(([key, count]) => {
+        let displayName = key;
+        if (BUNDLES[key]) {
+          displayName = BUNDLES[key].names[0];
+        } else if (articleDetails[key]) {
+          displayName = articleDetails[key].display;
+        }
+        return {
+          name: displayName,
+          count
+        };
+      });
+
+    // --- 4. Finaliser le Top 5 Wilayas (inchangé) ---
+    const topWilayas = Object.entries(wilayaSalesCounts)
+      .sort(([, countA], [, countB]) => countB - countA)
+      .slice(0, 5)
+      .map(([key, count]) => {
+        const displayName = key.charAt(0).toUpperCase() + key.slice(1);
+        return {
+          name: displayName,
+          count
+        };
+      });
+
+    // --- 5. Envoyer la réponse complète ---
+    console.log(`Dashboard Summary: Stock=${totalStockValue}, Gain (Confirmé/Prêt)=${totalPotentialGain}, Top 3=${JSON.stringify(topCategories)}, Top Wilayas=${JSON.stringify(topWilayas)}`);
+    res.json({
+      totalStockValue,
+      todaysPotentialGain: totalPotentialGain, // On garde le nom de variable
+      topCategories,
+      topWilayas
+    });
+
+  } catch (err) {
+    console.error("Erreur GET /api/dashboard-summary:", err.message);
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
+// comtalab/index.js
+
+// REMPLACE l'ancienne route /api/import-sheets par celle-ci
+app.post('/api/import-sheets', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  console.log(`--- POST /api/import-sheets (User ${userId}) ---`);
+  if (!db || !sheets) return res.status(503).json({ error: "Services non disponibles." });
+
+  let sheetInfo;
+  let rows;
+
+  // 1. Lire Google Sheets
+  try {
+    sheetInfo = await getSheetInfoForUser(userId);
+    const dynamicRangeRead = `'${sheetInfo.sheetName}'!A:J`; 
+    console.log(`Lecture de ${dynamicRangeRead} pour importation...`);
+    const response = await sheets.spreadsheets.values.get({ 
+      spreadsheetId: sheetInfo.spreadsheetId,
+      range: dynamicRangeRead 
+    });
+    rows = response.data.values;
+    if (!rows || rows.length < 2) {
+  	 	 return res.status(404).json({ message: 'Aucune donnée trouvée dans le Google Sheet.' });
+  	 }
+  } catch (err) {
+  	 return res.status(500).json({ error: `Erreur lecture Google Sheet: ${err.message}` });
+  }
+
+  // 2. Analyser les en-têtes
+  const headers = rows[0];
+  const transformedHeaders = transformHeaders(headers);
+  
+  const indices = {
+    telephone: transformedHeaders.indexOf('numero_de_telephone'),
+    nom_prenom: transformedHeaders.indexOf('nom_prenom'),
+    adresse: transformedHeaders.indexOf('adresse') !== -1 ? transformedHeaders.indexOf('adresse') : transformedHeaders.indexOf('wilaya_commune_et_adresse_nom_du_bureau'),
+    type_livraison: transformedHeaders.indexOf('type_de_livraison'),
+    articles: transformedHeaders.indexOf('articles'),
+    prix_total: transformedHeaders.indexOf('prix_total'),
+    date_commande: transformedHeaders.indexOf('date_commande'),
+    date_livraison: transformedHeaders.indexOf('date_a_livre_si_cest_reporte'),
+    etat: transformedHeaders.indexOf('etat_de_livraison'),
+    commentaire: transformedHeaders.indexOf('commentaire')
+  };
+  
+  if (indices.prix_total === -1 || indices.etat === -1 || indices.date_commande === -1) {
+  	 return res.status(400).json({ error: 'Colonnes critiques manquantes (prix_total, etat_de_livraison, date_commande) dans votre Sheet.' });
+  }
+  
+  // 3. Commencer la transaction de base de données
+  db.serialize(() => {
+  	 db.run('BEGIN TRANSACTION;', [], async (err) => {
+  	 	 if (err) return res.status(500).json({ error: `DB Transaction: ${err.message}` });
+  	 });
+
+  	 // 4. Nettoyer les anciennes commandes
+  	 console.log(`Nettoyage des anciennes commandes pour User ${userId}...`);
+  	 db.run(`DELETE FROM commandes WHERE user_id = ?`, [userId]);
+
+  	 // 5. Préparer l'insertion
+  	 const sqlInsert = `INSERT INTO commandes (telephone, nom_prenom, adresse, type_livraison, articles, prix_total, date_commande, date_livraison, etat, commentaire, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  	 const stmt = db.prepare(sqlInsert);
+
+  	 const commandesData = rows.slice(1);
+  	 let importCount = 0;
+
+  	 // 6. Insérer chaque ligne
+  	 for (const row of commandesData) {
+  	 	 const prix = parseFloat(row[indices.prix_total]) || 0;
+  	 	 // *** CORRECTION ICI : On normalise le statut avant de le sauvegarder ***
+  	 	 const etat = normalizeStatus(row[indices.etat] || 'en preparation'); 
+  	 	 const date_cmd = (row[indices.date_commande] || '').trim();
+  	 	 
+  	 	 if (prix === 0 || date_cmd === '') continue; 
+
+  	 	 stmt.run(
+  	 	 	 row[indices.telephone] || null,
+  	 	 	 row[indices.nom_prenom] || null,
+  	 	 	 row[indices.adresse] || null,
+  	 	 	 row[indices.type_livraison] || null,
+  	 	 	 row[indices.articles] || null, 
+  	 	 	 prix,
+  	 	 	 date_cmd,
+  	 	 	 row[indices.date_livraison] || null,
+  	 	 	 etat, // L'état est maintenant propre (ex: "pret a livrer")
+  	 	 	 row[indices.commentaire] || null,
+  	 	 	 userId
+  	 	 );
+  	 	 importCount++;
+  	 }
+
+  	 // 7. Finaliser
+  	 stmt.finalize();
+  	 db.run('COMMIT;', [], (err) => {
+  	 	 if (err) {
+  	 	 	 console.error("Erreur COMMIT importation:", err.message);
+  	 	 	 return res.status(500).json({ error: `Erreur finalisation: ${err.message}` });
+  	 	 }
+  	 	 console.log(`Importation réussie: ${importCount} commandes importées pour User ${userId}.`);
+  	 	 res.status(201).json({ message: `Importation réussie: ${importCount} commandes ont été synchronisées.` });
+  	 });
+  });
+});
+
+
+// --- API Google Sheet Data (MODIFIÉE POUR ÊTRE PLUS LÉGÈRE) ---
+// Cette route ne sert plus qu'à AFFICHER la liste et CHANGER LE STATUT.
+// Elle ne fait plus de calculs.
+app.get('/api/sheet-data', authenticateToken, async (req, res) => {
+    console.log(`--- GET /api/sheet-data (User ${req.user.id}) ---`);
+    if (!sheets) { return res.status(503).json({ error: 'Service Google Sheets non disponible.' }); }
+
+    let sheetInfo
+    try {
+      sheetInfo = await getSheetInfoForUser(req.user.id);
+    } catch (err) {
+      if (err.message.includes('Aucun lien')) return res.status(404).json({ error: err.message });
+      if (err.message.includes('invalide')) return res.status(400).json({ error: err.message });
+      return res.status(500).json({ error: err.message });
+    }
+    
+    const dynamicRangeRead = `'${sheetInfo.sheetName}'!A:J`;
+
+    try {
+        console.log(`Lecture Google Sheet ID: ${sheetInfo.spreadsheetId}, Range: ${dynamicRangeRead}`);
+        const response = await sheets.spreadsheets.values.get({ 
+            spreadsheetId: sheetInfo.spreadsheetId, 
+          	 range: dynamicRangeRead 
+        });
+        const rows = response.data.values;
+        console.log(`GET /api/sheet-data: ${rows ? rows.length : 0} lignes récupérées.`);
+        res.json(rows || []);
+    } catch (err) {
+        console.error('Erreur API Google Sheets GET /api/sheet-data:', err.message);
+        res.status(500).json({ error: 'Impossible de récupérer les données depuis Google Sheets.' });
+    }
+});
+
+app.put('/api/sheet-data/update-status', authenticateToken, async (req, res) => {
+  // (Cette route est inchangée, elle est parfaite)
+  // ... (ton code existant pour update-status)
+});
+// --- FIN API Google Sheet ---
 
 app.get('/api/sheet-data', authenticateToken, async (req, res) => {
     console.log(`--- GET /api/sheet-data (User ${req.user.id}) ---`);
@@ -950,8 +1410,9 @@ const articleDetails = {
   'hoodie': { 
   	 display: 'Hoodie', 
   	 aliases: ['sweat'], // <-- Synonyme
-  	 styles: ['premium', 'enfant', 'standard'], // <-- Corrigé (orma premium -> premium)
-  	 prix: { 'premium': 1650, 'enfant': 1300, 'standard': 1260 } 
+  	 styles: ['premium', 'enfant', 'standard', 'oversize'], // <-- Corrigé (orma premium -> premium)
+  	 prix: { 'premium': 1650, 'enfant': 1300, 'standard': 1260,'oversize': 1600 } 
+
   },
   'jogging': { 
   	 display: 'Jogging', 
@@ -1226,9 +1687,9 @@ const BUNDLES = {
 
 
 
-// comtalab/index.js
 
-// (Assure-toi que les dictionnaires 'articleDetails' et 'BUNDLES' sont au-dessus)
+
+// comtalab/index.js
 
 // REMPLACE L'ANCIENNE FONCTION 'parseArticleCost' PAR CELLE-CI
 function parseArticleCost(articlesText) {
@@ -1236,15 +1697,15 @@ function parseArticleCost(articlesText) {
   
   let finalTotalCost = 0;
   
-  // 1. Nettoyer le texte et remplacer "et" par "+"
+  // 1. Nettoyer le texte
   const cleanedText = articlesText.toLowerCase()
-                                    .replace(/\s+et\s+/g, ' + ') // " et " -> " + "
-                                    .replace(/,/g, ' + ');      // "," -> " + "
+                                    .replace(/\s+et\s+/g, ' + ') 
+                                    .replace(/,/g, ' + ');
 
   // 2. Séparer les articles
   const items = cleanedText.split('+');
 
-  // 3. Boucle sur chaque segment (chaque article)
+  // 3. Boucle sur chaque article
   for (const itemString of items) {
     const text = itemString.trim(); 
     if (text.length === 0) continue;
@@ -1261,7 +1722,7 @@ function parseArticleCost(articlesText) {
       textToParse = text.substring(qtyMatch[0].length).trim(); 
     }
 
-    // --- 5. Vérifier les LOTS (Bundles) d'abord ---
+    // --- 5. Vérifier les LOTS (Bundles) ---
     const bundleKeysSorted = Object.keys(BUNDLES).sort((a, b) => {
       const longestA = Math.max(...BUNDLES[a].names.map(n => n.length));
       const longestB = Math.max(...BUNDLES[b].names.map(n => n.length));
@@ -1286,7 +1747,7 @@ function parseArticleCost(articlesText) {
        continue; 
     }
 
-    // --- 6. Si ce n'est pas un lot, VÉRIFIER LES ARTICLES SIMPLES ---
+    // --- 6. VÉRIFIER LES ARTICLES SIMPLES ---
     for (const articleKey in articleDetails) {
       if (articleKey === 'autre') continue;
       
@@ -1301,45 +1762,48 @@ function parseArticleCost(articlesText) {
         }
       }
       
-      if (articleFoundInLoop) { // Article trouvé (ex: "hoodie")
+      if (articleFoundInLoop) { // Article trouvé (ex: "hoodie" ou "tshirt")
         let styleTrouve = null;
         let cost = 0;
+        
+        // *** CORRECTION IMPORTANTE ICI ***
+        // Trie les styles du plus long au plus court
+        // (ex: "oversize premium" sera trouvé AVANT "oversize")
         const stylesTries = (details.styles || []).sort((a, b) => b.length - a.length);
 
         for (const styleKey of stylesTries) {
           if (textToParse.includes(styleKey)) { 
-            styleTrouve = styleKey;
-            cost = details.prix[styleKey] || 0;
+            styleTrouve = styleKey; // ex: "oversize"
+            cost = details.prix[styleKey] || 0; // 1600 (pour hoodie) ou 950 (pour tshirt)
             break; 
           }
         }
         
+        // Cas spécial hoodie enfant (inchangé)
         if (articleKey === 'hoodie' && styleTrouve === 'enfant') {
            if (textToParse.includes(' s ') || textToParse.includes(' m ') || textToParse.includes(' l ') || textToParse.includes(' xl ') || textToParse.includes(' xxl ')) {
              cost = 1650;
            }
         }
         
-        // *** MODIFICATION ICI ***
-        // Si aucun style n'a été trouvé, appliquer le prix par défaut
+        // Gère les prix par défaut
         if (!styleTrouve) {
-            // CAS SPÉCIAL: Si c'est 'tshirt' sans style, c'est 'regular'
             if (articleKey === 'tshirt' && details.prix['regular']) {
                 console.log(`Style non trouvé pour "tshirt", utilisation du prix 'regular'`);
-                cost = details.prix['regular'];
+                cost = details.prix['regular']; // 620
+                styleTrouve = 'regular';
             } 
-            // CAS STANDARD: Si 'standard' existe (pour 'hoodie'), l'utiliser
-            else if (details.prix['standard']) {
-                console.log(`Style non trouvé pour "${textToParse}", utilisation du prix 'standard'`);
-                cost = details.prix['standard'];
+            else if (articleKey === 'hoodie' && details.prix['standard']) {
+                console.log(`Style non trouvé pour "hoodie", utilisation du prix 'standard'`);
+                cost = details.prix['standard']; // 1260
+                styleTrouve = 'standard';
             }
-            // Si aucun style par défaut n'est défini (ex: jogging), le coût restera 0
+            // (Si aucun défaut, cost reste 0)
         }
-        // *** FIN MODIFICATION ***
         
         itemCost = cost;
-        console.log(`Article trouvé: "${articleKey}", Style: "${styleTrouve || (articleKey === 'tshirt' ? 'regular' : 'standard')}", Coût: ${cost}`);
-        break; // On a trouvé le type (hoodie), on arrête de chercher
+        console.log(`Article trouvé: "${articleKey}", Style: "${styleTrouve}", Coût: ${cost}`);
+        break; 
       }
     } // fin boucle articleDetails
     
@@ -1350,12 +1814,6 @@ function parseArticleCost(articlesText) {
 
   return finalTotalCost; // Retourne la somme de tous les items
 }
-
-// comtalab/index.js
-
-// REMPLACE l'ancienne route /api/financial-summary par celle-ci
-// comtalab/index.js
-
 // REMPLACE l'ancienne route /api/financial-summary par celle-ci
 app.get('/api/financial-summary', authenticateToken, async (req, res) => {
   const userId = req.user.id;
@@ -1473,30 +1931,39 @@ app.get('/api/financial-summary', authenticateToken, async (req, res) => {
   });
 });
 
+// comtalab/index.js
+
+// ... (après la route app.get('/api/financial-summary', ...))
+
+// --- NOUVELLE API POUR LE STOCK FAIBLE (CORRIGÉE) ---
 app.get('/api/stock-low', authenticateToken, (req, res) => {
-  const userId = req.user.id;
-  const alertThreshold = 5; // On cherche les articles avec moins de 5 en stock
-  console.log(`--- GET /api/stock-low (User ${userId}, Seuil: ${alertThreshold}) ---`);
-  if (!db) return res.status(503).json({ error: "Service DB non disponible." });
+  const userId = req.user.id;
+  const alertThreshold = 5; // On cherche les articles avec moins de 5 en stock
+  console.log(`--- GET /api/stock-low (User ${userId}, Seuil: ${alertThreshold}) ---`);
+  if (!db) return res.status(503).json({
+    error: "Service DB non disponible."
+  });
 
-  // NOUVEAU : On définit ce qu'est un "vêtement"
-  // On utilise les clés de ton objet 'articleDetails'
-  const clothingKeys = ['tshirt', 'hoodie', 'jogging', 'sac a dos'];
+  // NOUVEAU : On définit ce qu'est un "vêtement"
+  // On utilise les clés de ton objet 'articleDetails'
+  const clothingKeys = ['tshirt', 'hoodie', 'jogging', 'sac a dos'];
 
-  // *** CORRECTION ICI : Requête sur une seule ligne ***
-  const sql = `SELECT id, nom, couleur, taille, style, quantite FROM stock_items WHERE user_id = ? AND quantite < ? AND nom IN (${clothingKeys.map(k => '?').join(',')}) ORDER BY quantite ASC LIMIT 5`;
+  // *** CORRECTION ICI : Requête sur une seule ligne ***
+  const sql = `SELECT id, nom, couleur, taille, style, quantite FROM stock_items WHERE user_id = ? AND quantite < ? AND nom IN (${clothingKeys.map(k => '?').join(',')}) ORDER BY quantite ASC LIMIT 5`;
 
+  // On ajoute les clés aux paramètres de la requête
+  const params = [userId, alertThreshold, ...clothingKeys];
 
-  const params = [userId, alertThreshold, ...clothingKeys];
-
-  db.all(sql, params, (err, rows) => {
-  	 if (err) {
-  	 	 console.error("Erreur DB GET /api/stock-low:", err.message);
-  	 	 return res.status(500).json({ error: err.message });
-  	 }
-  	 console.log(`Stock faible trouvé: ${rows.length} articles.`);
-  	 res.json(rows || []);
-  });
+  db.all(sql, params, (err, rows) => {
+    if (err) {
+      console.error("Erreur DB GET /api/stock-low:", err.message);
+      return res.status(500).json({
+        error: err.message
+      });
+    }
+    console.log(`Stock faible trouvé: ${rows.length} articles.`);
+    res.json(rows || []);
+  });
 });
 
 
@@ -1572,6 +2039,8 @@ S   }
 
 // comtalab/index.js
 
+// comtalab/index.js
+
 // REMPLACE l'ancienne route /api/dashboard-summary par celle-ci
 app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
   const userId = req.user.id;
@@ -1592,7 +2061,6 @@ app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
     	 resolve(row);
       });
     });
-  	 // (Ton log 'Stock=0' vient d'ici, vérifie que tu as des articles avec un prix > 0 dans ta table 'stock_items')
     totalStockValue = stockData.totalValue || 0; 
 
     // --- 2. Lire le Google Sheet pour les Gains et le Top 5 ---
@@ -1600,7 +2068,7 @@ app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
     const dynamicRangeRead = `'${sheetInfo.sheetName}'!A:J`; 
     const response = await sheets.spreadsheets.values.get({ 
       spreadsheetId: sheetInfo.spreadsheetId,
-      range: dynamicRangeRead 
+      range: dynamicRangeRead 
     });
     
     const rows = response.data.values;
@@ -1617,7 +2085,7 @@ app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
     const etatIndex = transformedHeaders.indexOf('etat_de_livraison');
     const articlesIndex = transformedHeaders.indexOf('articles'); 
     const dtfIndex = transformedHeaders.indexOf('dtf');
-  	 // (dateCommandeIndex n'est plus nécessaire)
+    // (dateCommandeIndex n'est plus nécessaire ici)
     let adresseIndex = transformedHeaders.indexOf('adresse');
     if (adresseIndex === -1) {
         adresseIndex = transformedHeaders.indexOf('wilaya_commune_et_adresse_nom_du_bureau');
@@ -1628,80 +2096,79 @@ app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
     } else {
     	 
     	 // Statuts pour le gain (Confirmé, Prêt à livrer) - SANS ACCENTS
-    	 const statutsGain = ['confirme', 'pret a livrer']; 
+    	 const statutsGain = ['confirme', 'pret a livrer']; // <-- CORRIGÉ
 
     	 let totalCommandesGain = 0, totalLivraisonGain = 0, totalCoutArticlesGain = 0, totalDTFGain = 0;
     	 
     	 const commandesData = rows.slice(1);
 
     	 for (const row of commandesData) {
-    	 	 const etatRaw = (row[etatIndex] || '');
-    	 	 const etatNormalized = normalizeStatus(etatRaw);
+    	 	 const etatNormalized = normalizeStatus(row[etatIndex]);
     	 	 const adresseText = (row[adresseIndex] || '').toLowerCase(); 
     	 	 
     	 	 // --- Comptage (Top 3 et Top 5) ---
     	 	 if (etatNormalized !== 'annulé' && etatNormalized !== 'non confirmé') {
     	 	 	 const articlesText = (row[articlesIndex] || '').toLowerCase();
+    	 	 	 // ... (logique de comptage Top 3, inchangée) ...
     	 	 	 let articleCompté = false;
+           for (const bundleKey in BUNDLES) {
+             const bundle = BUNDLES[bundleKey];
+             for (const nom of bundle.names) {
+               if (articlesText.includes(nom)) {
+                 salesCounts[bundleKey] = (salesCounts[bundleKey] || 0) + 1;
+                 articleCompté = true; break;
+               }
+             }
+             if (articleCompté) break;
+           }
+
+    	 	 	 if (!articleCompté) {
+    	 	 	 	 for (const articleKey in articleDetails) {
+    	 	 	 	 	 if (articleKey === 'autre') continue;
+    	 	 	 	 	 let allNames = [articleKey, ...articleDetails[articleKey].aliases];
+    	 	 	 	 	 for (const nom of allNames) {
+    	 	 	 	 	 	 if (articlesText.includes(nom)) {
+    	 	 	 	 	 	 	 salesCounts[articleKey] = (salesCounts[articleKey] || 0) + 1;
+    	 	 	 	 	 	 	 articleCompté = true; break;
+    	 	 	 	 	 	 }
+    	 	 	 	 	 }
+    	 	 	 	 	 if (articleCompté) break;
+    	 	 	 	 }
+    	 	 	 }
     	 	 	 
-    	 	 	 for (const bundleKey in BUNDLES) {
-    	 	 	 	 for (const nom of BUNDLES[bundleKey].names) {
-    	                   if (articlesText.includes(nom)) {
-                            salesCounts[bundleKey] = (salesCounts[bundleKey] || 0) + 1;
-                            articleCompté = true; break;
-                        }
-                      }
-                      if (articleCompté) break;
-                  }
+    	 	 	 // ... (logique de comptage Wilaya, inchangée) ...
+    	 	 	 let wilayaTrouvee = false;
+           for (const wilayaKey in PRIX_WILAYAS) {
+             if (wilayaKey === 'defaut') continue;
+             const wilayaData = PRIX_WILAYAS[wilayaKey];
+             for (const nom of wilayaData.names) {
+               if (adresseText.includes(nom)) {
+                 wilayaSalesCounts[wilayaKey] = (wilayaSalesCounts[wilayaKey] || 0) + 1;
+                 wilayaTrouvee = true; break;
+               }
+             }
+             if (wilayaTrouvee) break;
+           }
+    	 	 	 if (!wilayaTrouvee && adresseText.length > 2) { 
+    	 	 	 	 wilayaSalesCounts['inconnu'] = (wilayaSalesCounts['inconnu'] || 0) + 1;
+    	 	 	 }
+    	 	 }
 
-    	             if (!articleCompté) {
-    	                 for (const articleKey in articleDetails) {
-    	                     if (articleKey === 'autre') continue;
-    	                     let allNames = [articleKey, ...articleDetails[articleKey].aliases];
-    	                     for (const nom of allNames) {
-    	                         if (articlesText.includes(nom)) {
-    	                             salesCounts[articleKey] = (salesCounts[articleKey] || 0) + 1;
-                                  articleCompté = true; break;
-                              }
-                          }
-                          if (articleCompté) break;
-    	                 }
-    	             }
-    	             
-    	             let wilayaTrouvee = false;
-    	             for (const wilayaKey in PRIX_WILAYAS) {
-  	 	               if (wilayaKey === 'defaut') continue;
-  	 	               const wilayaData = PRIX_WILAYAS[wilayaKey];
-  	 	               for (const nom of wilayaData.names) {
-  	                       if (adresseText.includes(nom)) {
-  	                           wilayaSalesCounts[wilayaKey] = (wilayaSalesCounts[wilayaKey] || 0) + 1;
-  	                           wilayaTrouvee = true; break;
-    	                   }
-    	                 }
-    	                 if (wilayaTrouvee) break;
-    	             }
-    	             if (!wilayaTrouvee && adresseText.length > 2) { 
-    	                 wilayaSalesCounts['inconnu'] = (wilayaSalesCounts['inconnu'] || 0) + 1;
-    	             }
-    	         }
+    	 	 // --- Calcul du "Gain" (CORRIGÉ : SANS DATE) ---
+    	 	 if (statutsGain.includes(etatNormalized)) {
+    	 	 	 const prix_total = parseFloat(row[prixIndex]) || 0;
+    	 	 	 const typeLivraison = (row[typeLivraisonIndex] || 'autre').toLowerCase().trim();
+    	 	 	 const articlesText = (row[articlesIndex] || ''); 
+    	 	 	 const dtfValue = (dtfIndex !== -1) ? (parseFloat(row[dtfIndex]) || 0) : 0;
 
-    	         // --- Calcul du "Gain" (MODIFIÉ) ---
-    	         // On ne vérifie plus la date, juste le statut
-    	         if (statutsGain.includes(etatNormalized)) {
-    	             const prix_total = parseFloat(row[prixIndex]) || 0;
-    	             const typeLivraison = (row[typeLivraisonIndex] || 'autre').toLowerCase().trim();
-    	             const articlesText = (row[articlesIndex] || ''); 
-    	             const dtfValue = (dtfIndex !== -1) ? (parseFloat(row[dtfIndex]) || 0) : 0;
+    	 	 	 totalCommandesGain += prix_total;
+    	 	 	 totalCoutArticlesGain += parseArticleCost(articlesText); 
+    	 	 	 totalDTFGain += dtfValue;
 
-    	             totalCommandesGain += prix_total;
-    	             totalCoutArticlesGain += parseArticleCost(articlesText); 
-    	             totalDTFGain += dtfValue;
-
-    	             let coutLivraison = 0;
-  	 	             if (typeLivraison === 'main a main') {
-    	                 coutLivraison = 0;
-    	             } else if (typeLivraison === 'a domicile' || typeLivraison === 'bureau') {
-             // ... (logique de livraison inchangée) ...
+    	 	 	 let coutLivraison = 0;
+  	 	 	 if (typeLivraison === 'main a main') {
+    	 	 	 	 coutLivraison = 0;
+    	 	 	 } else if (typeLivraison === 'a domicile' || typeLivraison === 'bureau') {
              coutLivraison = PRIX_WILAYAS.defaut.prices[typeLivraison] || PRIX_WILAYAS.defaut.prices['autre'];
              let wilayaTrouvee = false;
              for (const wilayaKey in PRIX_WILAYAS) {
@@ -1716,9 +2183,9 @@ app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
                }
                if (wilayaTrouvee) break;
              }
-  	 	             }
-    	             totalLivraisonGain += coutLivraison;
-    	         }
+  	 	 	 }
+    	 	 	 totalLivraisonGain += coutLivraison;
+    	 	 }
     	 }
     	 totalPotentialGain = totalCommandesGain - totalLivraisonGain - totalCoutArticlesGain - totalDTFGain;
      }
@@ -1726,7 +2193,7 @@ app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
     // --- 3. Finaliser le Top 3 (inchangé) ---
     const topCategories = Object.entries(salesCounts)
     	 .sort(([, countA], [, countB]) => countB - countA) 
-         .slice(0, 3) 
+.slice(0, 3) 
     	 .map(([key, count]) => {
     	 	 let displayName = key;
     	 	 if (BUNDLES[key]) { displayName = BUNDLES[key].names[0]; } 
