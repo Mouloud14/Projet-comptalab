@@ -1,0 +1,105 @@
+/* src/pages/RetoursPage.css */
+
+/* Bouton pour afficher/cacher le formulaire */
+.toggle-form-btn{
+display:block;
+width:100%;
+padding:12px 20px;
+font-size:1.1rem;
+font-weight:600;
+color:#fff;
+background-color:var(--primary-color); /* Vert */
+border:none;
+border-radius:8px;
+cursor:pointer;
+margin-bottom:20px;
+transition:all 0.2s ease;
+}
+
+.toggle-form-btn:hover{
+background-color:#45a049;
+box-shadow:var(--shadow-light);
+}
+
+/* Le conteneur "éparpillé" */
+.retours-list-container{
+display:flex;
+flex-wrap:wrap;
+gap:15px;
+
+/* Remplace la grille rigide */
+/* On enlève le 'stock-sections-container' */
+width:100%;
+}
+
+/* On cache les titres de section (T-shirt, Hoodie...) */
+.retours-list-container .article-section-title{
+display:none;
+}
+
+/* On change le style des cartes */
+.retour-item-card{
+background-color:#fff;
+border-radius:8px;
+box-shadow:var(--shadow-light);
+padding:15px;
+
+/* S'adapte à la taille du contenu */
+flex-grow:1;
+flex-basis:300px; /* Chaque carte fait au moins 300px */
+
+transition:all 0.2s ease;
+}
+.retour-item-card:hover{
+box-shadow:var(--shadow-medium);
+transform:translateY(-2px);
+}
+
+.retour-item-card h5{
+display:flex;
+justify-content:space-between;
+align-items:center;
+font-size:1.1rem;
+font-weight:600;
+color:var(--text-color);
+margin:0 0 10px 0;
+padding-bottom:10px;
+border-bottom:1px solid #f0f0f0;
+}
+
+.retour-item-card h5 span{
+font-size:0.9rem;
+font-weight:500;
+color:var(--light-text-color);
+margin-left:10px;
+}
+
+.retour-item-card .variation-list{
+padding-left:5px; /* Plus besoin de l'indentation de 'StockPage.css' */
+}
+
+/* On garde le résumé en bas, mais on le cache s'il n'y a pas de filtre */
+/* (On réutilise le .stock-content-wrapper de StockPage) */
+.stock-content-wrapper{
+display:flex;
+flex-direction:row;
+flex-wrap:wrap;
+gap:20px;
+}
+
+/* La liste "fluide" prend la majorité de la place */
+.retours-list-container{
+flex-grow:999;
+flex-basis:0;
+min-width:70%;
+}
+
+/* Le résumé prend une plus petite place */
+.stock-global-summary{
+flex-grow:1;
+flex-basis:300px; /* Il prend au moins 300px */
+min-width:280px;
+height:fit-content; /* S'adapte à la hauteur du contenu */
+position:sticky;
+top:20px; /* Reste collé en haut quand on scrolle */
+}

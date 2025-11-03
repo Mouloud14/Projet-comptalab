@@ -1,4 +1,4 @@
-// src/components/TransactionForm.jsx (Corrigé avec le Token)
+// src/components/TransactionForm.jsx (Corrigé - alert() supprimé)
 import React, { useState, useEffect } from 'react';
 import './TransactionForm.css';
 
@@ -16,7 +16,7 @@ function TransactionForm({
   setTransactionToEdit,
   selectedDate, 
   setSelectedDate,
-  token // <-- MODIFICATION 1 : Accepte le token
+  token
 }) { 
   
   const [type, setType] = useState('depense');
@@ -31,6 +31,7 @@ function TransactionForm({
       setCategorie(transactionToEdit.categorie);
       setDescription(transactionToEdit.description);
     } else {
+      // Réinitialise le formulaire
       setType('depense');
       setMontant(0);
       setCategorie('');
@@ -62,24 +63,36 @@ function TransactionForm({
     const method = isEditMode ? 'PUT' : 'POST';
 
     try {
-      // --- MODIFICATION 2 : Ajout du header 'Authorization' ---
       const response = await fetch(url, { 
         method: method, 
         headers: { 
         	'Content-Type': 'application/json',
-        	'Authorization': `Bearer ${token}` // <-- Le token est maintenant envoyé
+        	'Authorization': `Bearer ${token}` 
         }, 
         body: JSON.stringify(transactionData), 
       });
-      // --- FIN DE LA MODIFICATION ---
 
       if (response.ok) {
-        const message = isEditMode ? 'Transaction modifiée !' : 'Transaction ajoutée !';
-        alert(message);
-        onFormSubmit(); 
-        setTransactionToEdit(null);
+        // const message = isEditMode ? 'Transaction modifiée !' : 'Transaction ajoutée !';
+        // alert(message); // <-- CETTE LIGNE EST SUPPRIMÉE
+        
+        // Affiche un log discret dans la console
+        console.log(isEditMode ? 'Transaction modifiée !' : 'Transaction ajoutée !');
+        
+        onFormSubmit(); // Rafraîchit la liste
+        
+        // Réinitialise le formulaire (sauf si on est en mode édition)
+        if (isEditMode) {
+        	setTransactionToEdit(null); // Quitte le mode édition
+        } else {
+        	// Réinitialise juste les champs modifiables
+        	setMontant(0);
+        	setCategorie('');
+        	setDescription('');
+        	// On garde le 'type' et la 'date' pour l'ajout rapide
+        }
+        
       } else {
-        // Affiche l'erreur si le token est mauvais
         const errData = await response.json();
         alert(`Erreur lors de l'opération: ${errData.message || 'Erreur inconnue'}`);
       }
@@ -120,31 +133,31 @@ function TransactionForm({
 
     	 <div className="form-control">
     	 	 <label>Catégorie:</label>
-    	 	 <select value={categorie} onChange={(e) => setCategorie(e.target.value)} required>
-    	 	 	 <option value="" disabled>-- Choisir une catégorie --</option>
-    	 	 	 {type === 'depense'
-    	 	 	 	 ? depenseCategories.map(cat => (<option key={cat} value={cat}>{cat}</option>))
-    	 	 	 	 : revenuCategories.map(cat => (<option key={cat} value={cat}>{cat}</option>))
-    	 	 	 }
-    	 	 </select>
-    	 </div>
+        <select value={categorie} onChange={(e) => setCategorie(e.target.value)} required>
+          <option value="" disabled>-- Choisir une catégorie --</option>
+          {type === 'depense'
+            ? depenseCategories.map(cat => (<option key={cat} value={cat}>{cat}</option>))
+            : revenuCategories.map(cat => (<option key={cat} value={cat}>{cat}</option>))
+          }
+        </select>
+      </div>
 
-    	 <div className="form-control">
-    	 	 <label>Commentaire (Optionnel):</label>
-    	 	 <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Détails, n° de commande, etc." />
-    	 </div>
-    	 
-    	 <div className="form-buttons">
-    	 	 <button type="submit" className="btn-submit">
-    	 	 	 {transactionToEdit ? 'Mettre à jour' : 'Ajouter'}
-    	 	 </button>
-    	 	 {transactionToEdit && (
-    	 	 	 <button type="button" className="btn-cancel" onClick={() => setTransactionToEdit(null)}>
-    	 	 	 	 Annuler
-    	 	 	 </button>
-    	 	 )}
-    	 </div>
-  	 </form>
+      <div className="form-control">
+        <label>Commentaire (Optionnel):</label>
+        <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Détails, n° de commande, etc." />
+      </div>
+      
+      <div className="form-buttons">
+        <button type="submit" className="btn-submit">
+          {transactionToEdit ? 'Mettre à jour' : 'Ajouter'}
+        </button>
+        {transactionToEdit && (
+          <button type="button" className="btn-cancel" onClick={() => setTransactionToEdit(null)}>
+            Annuler
+          </button>
+        )}
+      </div>
+    </form>
   );
 }
 

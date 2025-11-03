@@ -1,7 +1,6 @@
-/* src/pages/CommandesPage.css (Moderne et Discret) */
+/* src/pages/CommandesPage.css (Couleurs Corrigées) */
 
 :root {
-  /* --- Couleurs (Inchangées, elles sont bien) --- */
   --primary-color: #4CAF50;
   --secondary-color: #2196F3;
   --text-color: #333;
@@ -9,40 +8,41 @@
   --border-color: #e0e0e0;
   --bg-light: #f9f9f9;
   --bg-page: #f0f2f5;
-
-  /* --- Ombres (Plus subtiles) --- */
   --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.05);
   --shadow-medium: 0 4px 10px rgba(0, 0, 0, 0.08);
 
-  /* --- Couleurs de Statut (Inchangées) --- */
-  --status-confirme-bg: #E1BEE7;
+  /* --- Couleurs de Statut (MISES À JOUR) --- */
+  --status-confirme-bg: #E1BEE7; /* Violet clair */
   --status-confirme-border: #CE93D8;
-  --status-confirme-select: #BA68C8; /* Violet */
+  --status-confirme-select: #BA68C8; /* Violet (pour 'confirmé') */
 
-  --status-en-preparation-bg: #C8E6C9;
+  --status-en-preparation-bg: #C8E6C9; /* Vert clair */
   --status-en-preparation-border: #A5D6A7;
   --status-en-preparation-select: #66BB6A; /* Vert */
 
-  --status-non-confirme-bg: #BBDEFB;
+  --status-non-confirme-bg: #BBDEFB; /* Bleu clair */
   --status-non-confirme-border: #90CAF9;
   --status-non-confirme-select: #42A5F5; /* Bleu */
 
-  --status-annule-bg: #FFCDD2;
+  --status-annule-bg: #FFCDD2; /* Rouge clair */
   --status-annule-border: #EF9A9A;
   --status-annule-select: #E57373; /* Rouge */
 
-  --status-pret-a-livrer-bg: #FFF9C4;
+  --status-pret-a-livrer-bg: #FFF9C4; /* Jaune clair */
   --status-pret-a-livrer-border: #FFF59D;
-  --status-pret-a-livrer-select: #FBC02D; /* Jaune/Orangé plus lisible */
+  --status-pret-a-livrer-select: #FBC02D; /* Jaune/Orangé */
 
-  --status-echange-bg: #F5F5F5;
-  --status-echange-border: #E0E0E0;
-  --status-echange-select: #757575; /* Gris foncé */
+  /* MODIFIÉ : Echange (maintenant Violet) */
+  --status-echange-bg: #E1BEE7; /* Violet clair (comme 'confirmé') */
+  --status-echange-border: #CE93D8;
+  --status-echange-select: #BA68C8; /* Violet (comme 'confirmé') */
 
-  --status-envoye-bg: #F5F5F5;
-  --status-envoye-border: #E0E0E0;
-  --status-envoye-select: #757575; /* Gris foncé */
+  /* MODIFIÉ : Envoyé (maintenant Vert Foncé) */
+  --status-envoye-bg: #A5D6A7; /* Fond vert (comme 'en prépa') */
+  --status-envoye-border: #81C784;
+  --status-envoye-select: #388E3C; /* Selecteur vert foncé */
 }
+/* --- FIN DES MODIFICATIONS --- */
 
 body {
   margin: 0;
@@ -54,13 +54,12 @@ body {
 }
 
 .commandes-page-content {
-  padding: 25px 30px; /* Un peu plus de marge sur les côtés */
-  max-width: 1400px; /* Augmenté pour les grands écrans */
+  padding: 25px 30px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
 .commandes-page-content h1 {
-  /* MODIFIÉ : Alignement à gauche, plus moderne */
   text-align: left;
   color: var(--text-color);
   margin-bottom: 20px;
@@ -76,93 +75,86 @@ body {
   vertical-align: baseline;
 }
 
-/* ---
-     SECTION GAIN POTENTIEL (LA PLUS GROSSE MODIFICATION)
-     On réduit drastiquement sa taille pour qu'il ne pousse pas le contenu.
---- */
+/* Section Gain Potentiel (Compacte) */
 .financial-summary-container {
   background: #ffffff;
-  padding: 15px 20px; /* Padding réduit */
+  padding: 20px 25px;
   border-radius: 12px;
-  margin-bottom: 20px; /* Marge réduite */
+  margin-bottom: 20px;
   box-shadow: var(--shadow-light);
-  font-size: 0.9rem; /* Police plus petite */
-}
 
-/* Style pour TOUTES les lignes (Ventes, Coûts, etc.) */
-.financial-summary-container .summary-line {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 20px;
   align-items: center;
-  padding: 4px 0; /* Padding vertical très réduit */
-  margin: 0;
 }
-
-/* Ligne "Bénéfice Brut" */
-.financial-summary-container .summary-line:nth-of-type(4) {
-  font-size: 1.05rem;
+.financial-summary-container .summary-line {
+  grid-column: 1 / -1;
+  display: contents;
+}
+.financial-summary-container .summary-line > span:first-child {
+  text-align: left;
+}
+.financial-summary-container .summary-line > span:last-child {
+  text-align: right;
   font-weight: 600;
-  border-top: 1px solid #eee;
-  margin-top: 8px; /* Espacement réduit */
-  padding-top: 8px;
 }
-
-/* Ligne "Coût DTF" */
-.financial-summary-container .summary-line:nth-of-type(5) {
-  border-top: 1px solid #eee;
-  margin-top: 8px;
-  padding-top: 8px;
-}
-
-/* Ligne "Gain NET Final" */
-.financial-summary-container .summary-line.total {
-  font-size: 1.2rem;
-  font-weight: bold;
-  border-top: 2px solid var(--primary-color);
-  margin-top: 8px; /* Espacement réduit */
-  padding-top: 8px;
-}
-
-/* Ligne 1 (Ventes) */
-.financial-summary-container .summary-line:first-of-type span:last-of-type {
+.financial-summary-container .summary-line.ventes {
   font-weight: 600;
+  font-size: 1.1rem;
+}
+.financial-summary-container .value-positive {
   color: var(--status-en-preparation-select); /* Vert */
 }
-
-/* Lignes 2 & 3 (Coûts) */
-.financial-summary-container .summary-line:nth-of-type(2) span:last-of-type,
-.financial-summary-container .summary-line:nth-of-type(3) span:last-of-type {
-  font-weight: 500;
+.financial-summary-container .value-negative {
   color: var(--status-annule-select); /* Rouge */
 }
-
-/* Ligne 4 & 6 (Bénéfice & Net) */
-.financial-summary-container .summary-line:nth-of-type(4) span:last-of-type,
-.financial-summary-container .summary-line.total span:last-of-type {
-  color: var(--primary-color);
+.financial-summary-container .summary-line.brut {
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-top: 1px solid #eee;
+  margin-top: 5px;
+  padding-top: 10px;
 }
-
-/* Ligne 5 (Input DTF) */
-.financial-summary-container .summary-line label {
+.financial-summary-container .summary-line.brut span:last-child {
+  font-size: 1.2rem;
+}
+.financial-summary-container .summary-line.dtf-line {
+  border-top: 1px solid #eee;
+  margin-top: 5px;
+  padding-top: 10px;
+}
+.financial-summary-container .summary-line.dtf-line label {
   font-weight: 600;
   color: var(--light-text-color);
+  font-size: 0.9rem;
 }
-.financial-summary-container .summary-line input[type="number"] {
-  width: 100px; /* Largeur réduite */
-  padding: 5px 8px; /* Padding réduit */
+.financial-summary-container .summary-line.dtf-line input[type="number"] {
+  width: 100px;
+  padding: 5px 8px;
   text-align: right;
   border: 1px solid #ccc;
   border-radius: 6px;
   font-size: 0.9rem;
+  justify-self: end;
 }
-/* --- FIN SECTION GAIN POTENTIEL --- */
+.financial-summary-container .summary-line.total {
+  font-size: 1.3rem;
+  font-weight: bold;
+  border-top: 2px solid var(--primary-color);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.financial-summary-container .summary-line.total span:last-child {
+  color: var(--primary-color);
+}
+/* --- FIN SECTION GAIN --- */
 
-
-/* Barre de filtres (Padding réduit) */
+/* Barre de filtres (inchangée) */
 .commandes-filters-bar {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start; /* Alignés à gauche */
+  justify-content: flex-start;
   gap: 15px;
   margin-bottom: 25px;
   padding: 15px 20px;
@@ -171,17 +163,16 @@ body {
   box-shadow: var(--shadow-light);
   border: none;
 }
-
 .commandes-search-input {
-  flex: 1 1 300px; /* Prend plus de place */
+  flex: 1 1 300px;
 }
 .commandes-status-filter {
-  flex: 1 1 200px; /* Prend moins de place */
+  flex: 1 1 200px;
 }
-
 .commandes-search-input,
 .commandes-status-filter,
-.btn-refresh-commandes { /* Style pour le bouton rafraîchir */
+.btn-refresh-commandes,
+.btn-import-commandes {
   padding: 12px 15px;
   font-size: 0.95rem;
   border: 1px solid #ccc;
@@ -189,34 +180,39 @@ body {
   box-sizing: border-box;
   transition: all 0.2s ease-in-out;
   background-color: #fff;
-}
-
-.btn-refresh-commandes {
-  flex-basis: auto; /* Juste la largeur du texte */
   cursor: pointer;
-  font-weight: 500;
-  color: var(--text-color);
 }
-.btn-refresh-commandes:hover {
+.btn-refresh-commandes:hover,
+.btn-import-commandes:hover {
   background-color: #f5f5f5;
   border-color: #bbb;
 }
-
+.btn-import-commandes {
+  background-color: #00bfa5 !important;
+  color: white !important;
+  font-weight: 600 !important;
+  border-color: #00bfa5 !important;
+}
+.btn-import-commandes:hover {
+  background-color: #008c7a !important;
+  border-color: #008c7a !important;
+}
+.btn-import-commandes:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .commandes-search-input:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
   outline: none;
 }
-
 .commandes-status-filter:focus {
   border-color: #ccc;
   box-shadow: none;
   outline: none;
 }
-
 .commandes-status-filter {
   font-weight: 500;
-  cursor: pointer;
   color: var(--text-color);
   background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20fill%3D%22%23666666%22%20d%3D%22M7%2010l5%205%205-5z%22%2F%3E%3C%2Fsvg%3E');
   background-repeat: no-repeat;
@@ -258,22 +254,57 @@ body {
   border-top: 1px solid #eee;
   text-align: center;
 }
-.sheet-url-form h4 { color: var(--text-color); font-size: 1.1rem; margin-bottom: 10px; }
-.sheet-url-form p { color: var(--light-text-color); margin-bottom: 15px; }
-.sheet-url-form input[type="url"] { width: calc(100% - 30px); max-width: 500px; padding: 12px 15px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; font-size: 1rem; transition: all 0.2s ease-in-out; }
-.sheet-url-form input[type="url"]:focus { border-color: var(--secondary-color); box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2); outline: none; }
-.sheet-url-form button[type="submit"] { background-color: var(--secondary-color); color: white; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
-.sheet-url-form button[type="submit"]:hover { background-color: #1976D2; box-shadow: var(--shadow-light); }
-.sheet-url-form .urlSaveMessage { margin-top: 15px; font-size: 0.95rem; color: var(--light-text-color); }
-
-/* Conteneur des cartes */
-.commandes-list-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Cartes légèrement plus larges */
-  gap: 20px;
+.sheet-url-form h4 {
+  color: var(--text-color);
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+}
+.sheet-url-form p {
+  color: var(--light-text-color);
+  margin-bottom: 15px;
+}
+.sheet-url-form input[type="url"] {
+  width: calc(100% - 30px);
+  max-width: 500px;
+  padding: 12px 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 1rem;
+  transition: all 0.2s ease-in-out;
+}
+.sheet-url-form input[type="url"]:focus {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+  outline: none;
+}
+.sheet-url-form button[type="submit"] {
+  background-color: var(--secondary-color);
+  color: white;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.sheet-url-form button[type="submit"]:hover {
+  background-color: #1976D2;
+  box-shadow: var(--shadow-light);
+}
+.sheet-url-form .urlSaveMessage {
+  margin-top: 15px;
+  font-size: 0.95rem;
+  color: var(--light-text-color);
 }
 
-/* Styles des cartes */
+/* Conteneur des cartes (inchangé) */
+.commandes-list-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
 .commande-card {
   background-color: #ffffff;
   border: none;
@@ -281,22 +312,20 @@ body {
   box-shadow: var(--shadow-light);
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s ease-out; /* Effet de hover plus simple */
+  transition: box-shadow 0.2s ease-out;
   overflow: hidden;
 }
-
 .commande-card:hover {
   box-shadow: var(--shadow-medium);
 }
-
 .commande-card.updating {
   opacity: 0.7;
   pointer-events: none;
 }
 
+/* Couleurs de fond pour le .card-header (MODIFIÉES) */
 .card-header {
   padding: 16px 18px;
-  /* MODIFIÉ : Pas de bordure, le fond suffit */
   border-bottom: none;
   display: flex;
   justify-content: space-between;
@@ -306,15 +335,27 @@ body {
   border-top-right-radius: 10px;
   transition: background-color 0.3s ease;
 }
-
-/* Couleurs de fond pour le .card-header (inchangé) */
-.commande-card.status-confirme .card-header { background-color: var(--status-confirme-bg); }
-.commande-card.status-en-preparation .card-header { background-color: var(--status-en-preparation-bg); }
-.commande-card.status-non-confirme .card-header { background-color: var(--status-non-confirme-bg); }
-.commande-card.status-annule .card-header { background-color: var(--status-annule-bg); }
-.commande-card.status-pret-a-livrer .card-header { background-color: var(--status-pret-a-livrer-bg); }
-.commande-card.status-echange .card-header { background-color: var(--status-echange-bg); }
-.commande-card.status-envoye .card-header { background-color: var(--status-envoye-bg); }
+.commande-card.status-confirme .card-header {
+  background-color: var(--status-confirme-bg);
+}
+.commande-card.status-en-preparation .card-header {
+  background-color: var(--status-en-preparation-bg);
+}
+.commande-card.status-non-confirme .card-header {
+  background-color: var(--status-non-confirme-bg);
+}
+.commande-card.status-annule .card-header {
+  background-color: var(--status-annule-bg);
+}
+.commande-card.status-pret-a-livrer .card-header {
+  background-color: var(--status-pret-a-livrer-bg);
+}
+.commande-card.status-echange .card-header {
+  background-color: var(--status-echange-bg);
+}
+.commande-card.status-envoye .card-header {
+  background-color: var(--status-envoye-bg);
+}
 
 .card-header h3 {
   margin: 0;
@@ -322,19 +363,16 @@ body {
   color: var(--text-color);
   font-weight: 600;
 }
-
 .card-header p {
   margin: 0 0 0 12px;
   font-size: 0.9rem;
   color: var(--light-text-color);
   font-weight: 500;
 }
-
 .card-body {
   padding: 18px;
   flex-grow: 1;
 }
-
 .card-body p {
   margin: 0 0 10px 0;
   font-size: 0.95rem;
@@ -342,46 +380,50 @@ body {
   color: #444;
   word-break: break-word;
 }
-.card-body p strong { color: var(--text-color); font-weight: 600; }
-.card-body p:last-child { margin-bottom: 0; }
-.card-body p small { font-size: 0.85rem; color: #777; }
-.card-body p small strong { color: #555; font-weight: 600; }
-
+.card-body p strong {
+  color: var(--text-color);
+  font-weight: 600;
+}
+.card-body p:last-child {
+  margin-bottom: 0;
+}
+.card-body p small {
+  font-size: 0.85rem;
+  color: #777;
+}
+.card-body p small strong {
+  color: #555;
+  font-weight: 600;
+}
 .card-footer {
   padding: 12px 18px;
-  /* MODIFIÉ : Pas de bordure, le fond suffit */
-  border-top: none; 
+  border-top: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #fafafa; /* Fond légèrement différent du header */
+  background-color: #fafafa;
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
 }
-
 .card-footer small {
   font-size: 0.8rem;
   color: #888;
 }
 
-/* ---
-     STYLE DU SELECT (LA 2ÈME GROSSE MODIFICATION)
-     On le rend discret : plus de fond coloré, juste du texte coloré.
---- */
+/* Style du select (discret) (inchangé) */
 .status-select {
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: capitalize;
-  border: 1px solid var(--border-color); /* Bordure simple */
-  background-color: #fff; /* Fond blanc */
-  color: var(--text-color); /* Texte noir par défaut */
+  border: 1px solid var(--border-color);
+  background-color: #fff;
+  color: var(--text-color);
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
   padding-right: 28px;
-  /* Flèche grise unifiée */
   background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20fill%3D%22%23666666%22%20d%3D%22M7%2010l5%205%205-5z%22%2F%3E%3C%2Fsvg%3E');
   background-repeat: no-repeat;
   background-position: right 8px center;
@@ -389,7 +431,6 @@ body {
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 }
-
 .status-select:hover {
   background-color: #f9f9f9;
   border-color: #a0a0a0;
@@ -400,7 +441,7 @@ body {
   background-color: #eee;
 }
 
-/* Couleurs de TEXTE (et bordure) pour le select */
+/* Couleurs de TEXTE (et bordure) pour le select (MODIFIÉES) */
 .status-select.status-confirme {
   color: var(--status-confirme-select);
   border-color: var(--status-confirme-bg);
@@ -426,34 +467,68 @@ body {
   border-color: var(--status-echange-border);
 }
 .status-select.status-envoye {
-  color: var(--status-envoye-select);
-  border-color: var(--status-envoye-border);
+  color: var(--status-envoye-select); /* <-- Corrigé */
+  border-color: var(--status-envoye-border); /* <-- Corrigé */
 }
-
 
 /* Styles responsives (inchangés) */
 @media (max-width: 768px) {
   .commandes-filters-bar {
-      flex-direction: column;
-      gap: 15px;
+    flex-direction: column;
+    gap: 15px;
   }
   .commandes-search-input,
   .commandes-status-filter {
-      min-width: 100%;
+    min-width: 100%;
   }
   .commandes-list-container {
-      grid-template-columns: 1fr;
+    grid-template-columns: 1fr;
   }
   .commandes-page-content {
-      padding: 15px;
+    padding: 15px;
   }
   .commandes-page-content h1 {
-      font-size: 1.8rem;
-      margin-bottom: 20px;
-      margin-left: 0;
-      text-align: center; /* Recentrer pour les petits écrans */
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    margin-left: 0;
+    text-align: center;
   }
-  .card-header, .card-body, .card-footer {
-      padding: 15px;
+  .card-header,
+  .card-body,
+  .card-footer {
+    padding: 15px;
+  }
+
+  /* MODIFIÉ : Résumé sur mobile */
+  .financial-summary-container {
+    padding: 15px;
+    grid-template-columns: 1fr; /* Une seule colonne sur mobile */
+  }
+  .financial-summary-container .summary-line > span:last-child,
+  .financial-summary-container .summary-line.dtf-line input[type="number"] {
+    text-align: right;
+    justify-self: end; /* S'assure que tout est aligné à droite */
+  }
+  .summary-costs-grid {
+    grid-template-columns: 1fr; /* 1 colonne */
+    gap: 5px;
+    text-align: left; /* Aligne le texte à gauche */
+  }
+  .summary-costs-grid .cost-item {
+    display: flex;
+    justify-content: space-between; /* Met le prix à droite */
+    align-items: center;
+  }
+  .summary-costs-grid .cost-item span {
+    display: inline; /* Revient en ligne */
+    margin-bottom: 0;
+  }
+  .summary-costs-grid .cost-item strong {
+    display: inline;
+  }
+  .financial-summary-container .summary-line.dtf-line {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
   }
 }
