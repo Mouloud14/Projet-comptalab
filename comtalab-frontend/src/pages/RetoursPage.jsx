@@ -1,47 +1,28 @@
-// src/pages/RetoursPage.jsx (Simplifié et Corrigé)
-import React, { useState, useEffect, useMemo } from 'react';
-import './StockPage.css'; // On réutilise le MÊME CSS de base
-import './RetoursPage.css'; // On importe le CSS pour le look "fluide"
+// src/pages/RetoursPage.jsx
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+// On utilise le CSS de StockPage pour les utilitaires (formulaire, boutons, etc.)
+import './StockPage.css'; 
+import './RetoursPage.css'; // Notre nouveau CSS pour la liste compacte
 
-// --- Structure des données articleDetails ---
+// --- Structure des données articleDetails (Copie du StockPage pour cohérence) ---
 const articleDetails = {
-  'tshirt': {
-    display: 'T-shirt',
-    aliases: ['t shirt', 't-shirt'],
-    styles: ['oversize', 'oversize premium', 'regular premium', 'regular', 'enfant']
-  },
-  'hoodie': {
-    display: 'Hoodie',
-    aliases: ['sweat'],
-    styles: ['premium', 'enfant', 'standard', 'oversize']
-  },
-  'jogging': {
-    display: 'Jogging',
-    aliases: [],
-    styles: ['oversize elastiqué', 'elastiqué normal', 'open leg']
-  },
-  'sac a dos': {
-    display: 'Sac à dos',
-    aliases: ['sacados', 'sac à dos'],
-    styles: ['standard', 'premium']
-  },
-  'autre': {
-    display: 'Autre',
-    aliases: [],
-    styles: []
-  }
+  't shirt': { display: 'T-shirt', styles: ['oversize', 'oversize premium', 'regular premium', 'regular', 'enfant'], aliases: ['t-shirt', 'tshirt'] },
+  'hoodie': { display: 'Hoodie', styles: ['orma premium', 'enfant', 'standard'], aliases: ['sweat'] },
+  'jogging': { display: 'Jogging', styles: ['oversize elastiqué', 'elastiqué normal', 'open leg'], aliases: [] },
+  'sac a dos': { display: 'Sac à dos', styles: ['standard', 'premium'], aliases: ['sacados'] },
+  'autre': { display: 'Autre', styles: [], aliases: [] }
 };
-// --- FIN Structure ---
+const articleOrder = Object.keys(articleDetails); // Utilisation des clés pour le tri
 
 
-// --- Composant Formulaire (Modifié pour /api/retours) ---
+// --- Composant Formulaire (Adapté pour /api/retours) ---
 function AddRetourItemForm({ onRetourAdded, token }) {
   const nomsDeBaseKeys = Object.keys(articleDetails);
-  const [nom, setNom] = useState(''); // 'tshirt', 'hoodie', 'autre'
-  const [style, setStyle] = useState(''); // 'oversize', 'premium'
-  const [taille, setTaille] = useState(''); // 'S', 'M'
-  const [couleur, setCouleur] = useState(''); // 'Noir'
-  const [description, setDescription] = useState(''); // 'Hoodie Luffy' (le nom spécifique)
+  const [nom, setNom] = useState(''); 
+  const [style, setStyle] = useState(''); 
+  const [taille, setTaille] = useState(''); 
+  const [couleur, setCouleur] = useState(''); 
+  const [description, setDescription] = useState(''); // Le nom spécifique (Hoodie Luffy)
   const [formError, setFormError] = useState('');
 
   const couleursSuggerees = ['Noir', 'Blanc', 'Gris', 'Bleu', 'Rouge', 'Vert', 'Beige'];
@@ -69,35 +50,34 @@ function AddRetourItemForm({ onRetourAdded, token }) {
     e.preventDefault();
     setFormError('');
 
-    const nomFinal = nom; // 'tshirt', 'hoodie', 'autre'
+    const nomFinal = nom; 
     const styleFinal = isAutreMode ? null : (style || null);
     const tailleAEnvoyer = isSacADos ? 'Unique' : (taille || null);
     const couleurAEnvoyer = isCouleurRequired ? couleur : (couleur || null);
-    const descriptionFinale = description || null; // Le nom spécifique
+    const descriptionFinale = description || null; 
 
     let validationError = "";
     if (!nomFinal) validationError = '"Catégorie"';
     else if (isTailleRequired && !taille) validationError = '"Taille"';
     else if (isCouleurRequired && !couleur) validationError = '"Couleur"';
-    else if (!descriptionFinale) validationError = '"Description (Modèle)"'; // Description est TOUJOURS requise
+    else if (!descriptionFinale) validationError = '"Description (Modèle)"'; 
 
     if (validationError) {
       setFormError(`Veuillez remplir le champ ${validationError}.`);
       return;
     }
 
-    // Si ce n'est pas 'autre', mais qu'on a pas de style (ex: T-shirt simple)
-    if (!isAutreMode && stylesDisponibles.length > 0 && !styleFinal) {
-      setFormError("Veuillez choisir un style (ou 'standard'/'regular' s'il n'y en a pas).");
+    if (!isAutreMode && stylesDisponibles.length > 0 && !styleFinal && nomFinal !== 'autre') {
+      setFormError("Veuillez choisir un style pour cet article.");
       return;
     }
 
     const newItem = {
-      nom: nomFinal, // 'tshirt', 'hoodie', 'autre'
+      nom: nomFinal, 
       taille: tailleAEnvoyer,
       couleur: couleurAEnvoyer,
-      style: styleFinal, // 'oversize', 'premium', 'null'
-      description: descriptionFinale // 'Hoodie Luffy', 'T-shirt Naruto'
+      style: styleFinal, 
+      description: descriptionFinale 
     };
 
     try {
@@ -112,7 +92,7 @@ function AddRetourItemForm({ onRetourAdded, token }) {
       });
 
       if (response.ok) {
-        console.log('Retour ajouté !');
+        alert('Retour ajouté !');
         setNom(''); setTaille(''); setCouleur(''); setStyle(''); setDescription('');
         if (typeof onRetourAdded === 'function') { onRetourAdded(); }
       } else {
@@ -127,7 +107,7 @@ function AddRetourItemForm({ onRetourAdded, token }) {
   };
 
   const taillesSuggereesFinales = useMemo(() => {
-    const isTailleEnfantMode = style === 'enfant' && ['tshirt', 'hoodie'].includes(nom);
+    const isTailleEnfantMode = style === 'enfant' && ['t shirt', 'hoodie'].includes(nom);
     if (isSacADos) return ['Unique'];
     if (isTailleEnfantMode) return ['6 ans', '8 ans', '10 ans', '12 ans', '14 ans'];
     return ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Unique'];
@@ -140,33 +120,32 @@ function AddRetourItemForm({ onRetourAdded, token }) {
       {/* Champ 1: Catégorie */}
       <div className="form-control-stock"> <label>Catégorie*:</label> <select value={nom} onChange={e => handleNomChange(e.target.value)} required> <option value="" disabled>-- Choisir --</option> {nomsDeBaseKeys.map(n => <option key={n} value={n}>{articleDetails[n].display}</option>)} </select> </div>
 
-      {/* Champ 2: Description (Modèle) - NOUVEAU */}
+      {/* Champ 2: Description (Modèle) - AJOUTÉ */}
       <div className="form-control-stock">
         <label>Description (Modèle)*:</label>
-        <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Hoodie Luffy, T-shirt Real Madrid" required />
+        <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Hoodie Luffy, T-shirt Naruto" required />
       </div>
 
-      {/* Champ 3: Style (Optionnel, sauf si 'autre' est sélectionné) */}
-      {!isAutreMode && (
-        <div className="form-control-stock">
-          <label>Style:</label>
-          <select value={style} onChange={e => setStyle(e.target.value)} required={stylesDisponibles.length > 0} disabled={!nom || stylesDisponibles.length === 0}>
-            <option value="">-- {nom ? (stylesDisponibles.length > 0 ? 'Choisir style' : 'Aucun') : 'Choisir article'} --</option>
-            {stylesDisponibles.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-      )}
+      {/* Champ 3: Style */}
+      <div className="form-control-stock">
+        <label>Style:</label>
+        <select value={style} onChange={e => setStyle(e.target.value)} required={!isAutreMode && stylesDisponibles.length > 0} disabled={!nom || stylesDisponibles.length === 0}>
+          <option value="">-- Choisir style --</option>
+          {stylesDisponibles.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
 
       {/* Champ 4: Taille */}
-      <div className="form-control-stock"> <label>{isTailleRequired ? "Taille*:" : "Taille (Optionnel):"}</label> <input type="text" value={taille} onChange={e => setTaille(e.target.value)} placeholder={isSacADos ? "Unique" : "S, M, L..."} required={isTailleRequired} list="tailles" disabled={isTailleDisabled} /> <datalist id="tailles"> {taillesSuggereesFinales.map(t => <option key={t} value={t} />)} </datalist> </div>
+      <div className="form-control-stock"> <label>{isTailleRequired ? "Taille*:" : "Taille (Opt):"}</label> <input type="text" value={taille} onChange={e => setTaille(e.target.value)} placeholder={isSacADos ? "Unique" : "S, M, L..."} required={isTailleRequired} list="tailles" disabled={isTailleDisabled} /> <datalist id="tailles"> {taillesSuggereesFinales.map(t => <option key={t} value={t} />)} </datalist> </div>
 
       {/* Champ 5: Couleur */}
       <div className="form-control-stock">
-        <label>{isCouleurRequired ? "Couleur*:" : "Couleur (Optionnel):"}</label>
+        <label>{isCouleurRequired ? "Couleur*:" : "Couleur (Opt):"}</label>
         <input type="text" value={couleur} onChange={e => setCouleur(e.target.value)} placeholder="Noir, Blanc..." required={isCouleurRequired} list="couleurs" disabled={!nom} />
         <datalist id="couleurs"> {couleursSuggerees.map(c => <option key={c} value={c} />)} </datalist>
       </div>
 
+      {/* Bouton Ajouter */}
       <button type="submit" className="btn-submit-stock" disabled={!nom}>Ajouter 1 Retour</button>
     </form>
   );
@@ -181,9 +160,8 @@ function RetoursPage({ token }) {
   const [error, setError] = useState(null);
   const [articleFilter, setArticleFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  // const [showAddForm, setShowAddForm] = useState(true); // Formulaire toujours visible
 
-  const fetchStock = async () => {
+  const fetchStock = useCallback(async () => {
     setError(null);
     try {
       const response = await fetch('http://localhost:3001/api/retours', {
@@ -207,7 +185,7 @@ function RetoursPage({ token }) {
     } finally {
       if (loading) setLoading(false);
     }
-  };
+  }, [token, loading]);
 
   useEffect(() => {
     setLoading(true);
@@ -217,9 +195,8 @@ function RetoursPage({ token }) {
       setError("Veuillez vous connecter pour voir les retours.");
       setStockItems([]);
     }
-  }, [token]);
+  }, [token, fetchStock]);
 
-  // MODIFIÉ : S'appelle maintenant handleDeleteItem
   const handleDeleteItem = async (itemId, itemTitle) => {
     if (!window.confirm(`Es-tu sûr de vouloir supprimer cet article en retour ?\n\n"${itemTitle}"\n\nAction irréversible !`)) return;
 
@@ -246,31 +223,28 @@ function RetoursPage({ token }) {
   };
 
 
-  // --- 1. MODIFIÉ : On ne groupe plus. On filtre. ---
+  // --- Logique de Filtrage et de Tri (Adaptée au mode Liste) ---
   const filteredRetours = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
-    const articleOrder = ['tshirt', 'hoodie', 'jogging', 'sac a dos', 'autre'];
+    const articleOrderKeys = Object.keys(articleDetails);
 
     return stockItems
       .map(item => {
-        // Construit le nom complet de l'article
         const baseInfo = articleDetails[item.nom] || { display: 'Autre' };
-        let displayName = '';
+        
+        // Construction de la description pour l'affichage et la recherche
+        let descriptionFull = item.description || baseInfo.display;
+        if (item.style && item.style !== 'standard') descriptionFull += ` (${item.style})`;
+        if (item.couleur) descriptionFull += ` ${item.couleur}`;
+        if (item.taille && item.taille !== 'Unique') descriptionFull += ` ${item.taille}`;
 
-        if (item.nom === 'autre') {
-          displayName = item.description || item.style || 'Article inconnu'; // Utilise description si disponible, sinon style
-        } else {
-          displayName = item.description || baseInfo.display; // Priorité à la description
-          if (item.style && item.style !== 'standard') displayName += ` ${item.style}`;
-        }
-
-        if (item.couleur) displayName += ` ${item.couleur}`;
-        if (item.taille && item.taille !== 'Unique') displayName += ` ${item.taille}`;
 
         return {
           ...item,
-          fullDescription: displayName.trim(),
-          baseCategory: item.nom // 'tshirt', 'hoodie', etc.
+          fullDescription: descriptionFull.trim(),
+          baseCategory: item.nom, 
+          // Utilisation du nom du style pour l'affichage si la description n'est pas remplie
+          itemDescription: item.description || (item.style || item.nom)
         };
       })
       .filter(item => {
@@ -280,34 +254,23 @@ function RetoursPage({ token }) {
 
         // 2. Filtre par Recherche
         if (term === '') return true;
-        return item.fullDescription.toLowerCase().includes(term);
+        return item.fullDescription.toLowerCase().includes(term) || 
+               item.itemDescription.toLowerCase().includes(term);
       })
-      .sort((a, b) => { // Tri par catégorie de base
-        const indexA = articleOrder.indexOf(a.baseCategory);
-        const indexB = articleOrder.indexOf(b.baseCategory);
+      .sort((a, b) => { // Tri: Catégorie de base, puis Description
+        const indexA = articleOrderKeys.indexOf(a.baseCategory);
+        const indexB = articleOrderKeys.indexOf(b.baseCategory);
         if (indexA !== indexB) return indexA - indexB;
-        return a.fullDescription.localeCompare(b.fullDescription); // Puis alphabétique
+        return a.fullDescription.localeCompare(b.fullDescription); 
       });
 
   }, [stockItems, articleFilter, searchTerm]);
-  // --- FIN MODIFICATION ---
 
-  // --- Les useMemos pour les totaux et le tri sont SUPPRIMÉS ---
-
-  // --- Formatage Argent (inchangé) ---
-  const formatArgent = (nombre) => {
-    if (typeof nombre !== 'number' || isNaN(nombre)) {
-      return '0 DZD';
-    }
-    return new Intl.NumberFormat('fr-FR').format(nombre.toFixed(0)) + ' DZD';
-  };
-
-  // --- RENDER (Totalement modifié) ---
+  // --- RENDER ---
   return (
     <div className="stock-page-content retours-page">
       <h2>Gestion des Retours</h2>
 
-      {/* Le formulaire est TOUJOURS visible */}
       <AddRetourItemForm onRetourAdded={fetchStock} token={token} />
 
       <hr className="stock-divider"/>
@@ -320,7 +283,7 @@ function RetoursPage({ token }) {
         </select>
       </div>
 
-      <h3>Récapitulatif des Retours ({filteredRetours.length} articles)</h3>
+      <h3>Liste des Retours ({filteredRetours.length} articles)</h3>
 
       {loading ? (
         <p>Chargement des retours...</p>
@@ -329,26 +292,51 @@ function RetoursPage({ token }) {
       ) : (
         <div className="stock-content-wrapper">
 
-          {/* --- NOUVELLE VUE : LISTE FLUIDE --- */}
+          {/* --- NOUVELLE VUE : LISTE COMPACTE (TABLEAU) --- */}
           <div className="retours-list-container">
+            
             {filteredRetours.length > 0 ? (
-              filteredRetours.map(item => {
+                <>
+                    {/* EN-TÊTE DU TABLEAU */}
+                    <div className="retours-list-header">
+                        <span>Catégorie</span>
+                        <span>Description et Style</span>
+                        <span>Taille</span>
+                        <span>Couleur</span>
+                        <span className="retour-actions"></span> {/* Colonne Actions */}
+                    </div>
+                    
+                    {/* CORPS DU TABLEAU */}
+                    {filteredRetours.map(item => {
+                        const categoryDisplay = articleDetails[item.nom]?.display || item.nom;
 
-                return (
-                  <div key={item.id} className="retour-item-card">
-                    <h5>
-                      {item.fullDescription}
-                      <button
-                        onClick={() => handleDeleteItem(item.id, item.fullDescription)}
-                        className="btn-delete-group"
-                        title="Supprimer cet article"
-                      >
-                        🗑️
-                      </button>
-                    </h5>
-                  </div>
-                );
-              })
+                        return (
+                            <div key={item.id} className="retour-item-row">
+                                
+                                <span className="retour-category">{categoryDisplay}</span>
+
+                                <span className="retour-description">
+                                    {item.description || item.style}
+                                    {item.description && item.style && item.style !== 'standard' && ` (${item.style})`}
+                                </span>
+
+                                <span className="retour-taille">{item.taille || '-'}</span>
+                                
+                                <span className="retour-couleur">{item.couleur || '-'}</span>
+
+                                <span className="retour-actions">
+                                    <button
+                                        onClick={() => handleDeleteItem(item.id, item.fullDescription)}
+                                        className="btn-delete-group"
+                                        title="Supprimer cet article"
+                                    >
+                                        🗑️
+                                    </button>
+                                </span>
+                            </div>
+                        );
+                    })}
+                </>
             ) : (
               <p className="empty-summary-message">
                 {stockItems.length > 0 ? "Aucun article ne correspond à votre recherche ou filtre." : "Votre stock de retours est vide."}
@@ -356,9 +344,6 @@ function RetoursPage({ token }) {
             )}
           </div>
           {/* --- FIN NOUVELLE VUE --- */}
-
-          {/* Le résumé global est SUPPRIMÉ */}
-
         </div>
       )}
     </div>

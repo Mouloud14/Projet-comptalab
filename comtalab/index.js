@@ -130,6 +130,26 @@ CREATE TABLE IF NOT EXISTS commandes (
             console.log("Table 'commandes' prête (avec user_id).");
         });
 
+
+// 4. Retours (NOUVEAU CODE)
+const sqlCreateTableRetours = `
+CREATE TABLE IF NOT EXISTS retours (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  nom TEXT NOT NULL,
+  style TEXT,
+  taille TEXT,
+  couleur TEXT,
+  description TEXT,
+  date_ajout DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`;
+        db.run(sqlCreateTableRetours, (err) => {
+            if (err) { return console.error("Erreur création table retours:", err.message); }
+            console.log("Table 'retours' prête (avec user_id).");
+        });
+
+
 // 4. Utilisateurs (inchangée, mais le mdp sera haché)
 const sqlCreateTableUtilisateurs = `
 CREATE TABLE IF NOT EXISTS utilisateurs (
@@ -397,6 +417,81 @@ app.delete('/api/stock/group', authenticateToken, (req, res) => {
   let sql = `DELETE FROM "stock_items" WHERE "nom" = ? AND "user_id" = ?`;
   const params = [nom, userId];
 
+
+// --- NOUVELLE API RETOURS (SÉCURISÉE) ---
+
+// Récupérer tous les retours de l'utilisateur
+app.get('/api/retours', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    console.log(`--- GET /api/retours (User ${userId}) ---`);
+    if (!db) return res.status(503).json({ error: "Service DB non disponible." });
+    
+    // Sélectionne tous les champs et trie par date
+    db.all("SELECT * FROM retours WHERE user_id = ? ORDER BY date_ajout DESC", [userId], (err, rows) => {
+        if (err) { console.error("Erreur DB GET /api/retours:", err.message); return res.status(500).json({ error: err.message }); }
+        console.log(`GET /api/retours: ${rows ? rows.length : 0} retours trouvés.`);
+        res.json(rows || []);
+    });
+});
+
+// Ajouter un nouveau retour
+app.post('/api/retours', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    console.log(`--- POST /api/retours (User ${userId}) ---`, req.body);
+    if (!db) return res.status(503).json({ error: "Service DB non disponible." });
+    
+    const { nom, style, taille, couleur, description } = req.body; 
+    
+    // Validation minimale: nom et description sont requis pour un retour
+    if (!nom || !description) { 
+        console.warn("POST /api/retours: Données invalides (nom ou description manquant)."); 
+        return res.status(400).json({ error: 'Nom et Description sont requis pour ajouter un retour.' }); 
+    }
+    
+    const sql = `INSERT INTO retours (user_id, nom, style, taille, couleur, description) VALUES (?, ?, ?, ?, ?, ?)`;
+    
+    db.run(sql, 
+        [userId, nom, style || null, taille || null, couleur || null, description], 
+        function (err) {
+            if (err) { 
+                console.error("Erreur DB POST /api/retours:", err.message); 
+                return res.status(500).json({ error: err.message }); 
+            }
+            console.log(`POST /api/retours: Nouveau retour inséré (ID: ${this.lastID}).`);
+            res.status(201).json({ 
+                id: this.lastID, 
+                user_id: userId,
+                nom, style, taille, couleur, description 
+            });
+        }
+    );
+});
+
+// Supprimer un retour par ID
+app.delete('/api/retours/:id', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const retourId = req.params.id;
+    console.log(`--- DELETE /api/retours/${retourId} (User ${userId}) ---`);
+    if (!db) return res.status(503).json({ error: "Service DB non disponible." });
+    
+    // Suppression sécurisée : vérifie l'ID et l'appartenance à l'utilisateur
+    db.run(`DELETE FROM "retours" WHERE "id" = ? AND "user_id" = ?`, [retourId, userId], function(err) {
+        if (err) { 
+            console.error(`Erreur DB DELETE /api/retours/${retourId}:`, err.message); 
+            return res.status(500).json({ error: err.message }); 
+        }
+        if (this.changes === 0) { 
+            console.warn(`DELETE /api/retours/${retourId}: Retour non trouvé ou non autorisé.`); 
+            return res.status(404).json({ message: "Retour non trouvé ou non autorisé" }); 
+        }
+        console.log(`DELETE /api/retours/${retourId}: Retour supprimé.`);
+        res.status(200).json({ message: "Retour supprimé" });
+    });
+});
+
+// --- FIN API RETOURS ---
+
+// ... (Le code de l'API Commandes suit ici, inchangé)
   // --- LOGIQUE CORRIGÉE POUR LA COULEUR ---
   // Si la couleur est 'null' (envoyée par ton code) ou 'Sans couleur' (envoyée par l'ancien code)
   if (couleur === 'null' || couleur === 'Sans couleur' || couleur === undefined || couleur === '') {

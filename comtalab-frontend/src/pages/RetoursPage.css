@@ -1,105 +1,91 @@
 /* src/pages/RetoursPage.css */
 
-/* Bouton pour afficher/cacher le formulaire */
-.toggle-form-btn{
-display:block;
-width:100%;
-padding:12px 20px;
-font-size:1.1rem;
-font-weight:600;
-color:#fff;
-background-color:var(--primary-color); /* Vert */
-border:none;
-border-radius:8px;
-cursor:pointer;
-margin-bottom:20px;
-transition:all 0.2s ease;
+/* --- Vue Liste Compacte (Tableau) --- */
+
+/* Le conteneur principal du tableau */
+.retours-list-container {
+    display: block;
+    width: 100%;
+    background-color: var(--card-background); /* Fond blanc */
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden; /* Assure que les bordures sont respectées */
 }
 
-.toggle-form-btn:hover{
-background-color:#45a049;
-box-shadow:var(--shadow-light);
+/* En-tête du tableau (Ligne de titres) */
+.retours-list-header {
+    display: grid;
+    /* Définition des colonnes : Catégorie(100) | Description(Flex) | Taille(80) | Couleur(100) | Actions(40) */
+    grid-template-columns: 100px 1fr 80px 100px 40px; 
+    gap: 10px;
+    padding: 12px 15px;
+    background-color: #e8f5e9; /* Fond vert très clair */
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    border-bottom: 2px solid var(--accent-color);
 }
 
-/* Le conteneur "éparpillé" */
-.retours-list-container{
-display:flex;
-flex-wrap:wrap;
-gap:15px;
-
-/* Remplace la grille rigide */
-/* On enlève le 'stock-sections-container' */
-width:100%;
+/* Style de la ligne individuelle de retour */
+.retour-item-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 80px 100px 40px; /* Doit correspondre à l'en-tête */
+    gap: 10px;
+    padding: 10px 15px;
+    font-size: 0.9rem;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.1s ease;
 }
 
-/* On cache les titres de section (T-shirt, Hoodie...) */
-.retours-list-container .article-section-title{
-display:none;
+.retour-item-row:hover {
+    background-color: #fafafa;
 }
 
-/* On change le style des cartes */
-.retour-item-card{
-background-color:#fff;
-border-radius:8px;
-box-shadow:var(--shadow-light);
-padding:15px;
-
-/* S'adapte à la taille du contenu */
-flex-grow:1;
-flex-basis:300px; /* Chaque carte fait au moins 300px */
-
-transition:all 0.2s ease;
-}
-.retour-item-card:hover{
-box-shadow:var(--shadow-medium);
-transform:translateY(-2px);
+/* Mise en gras de la catégorie pour la distinction */
+.retour-item-row .retour-category {
+    font-weight: 600;
 }
 
-.retour-item-card h5{
-display:flex;
-justify-content:space-between;
-align-items:center;
-font-size:1.1rem;
-font-weight:600;
-color:var(--text-color);
-margin:0 0 10px 0;
-padding-bottom:10px;
-border-bottom:1px solid #f0f0f0;
+/* Style du bouton de suppression (réutilise le style de StockPage.css) */
+.retour-actions {
+    text-align: right;
 }
-
-.retour-item-card h5 span{
-font-size:0.9rem;
-font-weight:500;
-color:var(--light-text-color);
-margin-left:10px;
+.retour-item-row .btn-delete-group {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
 }
+.retour-item-row:hover .btn-delete-group { opacity: 1; }
 
-.retour-item-card .variation-list{
-padding-left:5px; /* Plus besoin de l'indentation de 'StockPage.css' */
-}
 
-/* On garde le résumé en bas, mais on le cache s'il n'y a pas de filtre */
-/* (On réutilise le .stock-content-wrapper de StockPage) */
-.stock-content-wrapper{
-display:flex;
-flex-direction:row;
-flex-wrap:wrap;
-gap:20px;
-}
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    /* Sur mobile, passage à une vue en liste plus simple */
+    .retours-list-header {
+        display: none; /* Cache l'en-tête pour gagner de la place */
+    }
+    .retour-item-row {
+        /* Simplification des colonnes pour éviter le scroll */
+        grid-template-columns: 1fr 60px 40px; /* Description | Taille | Actions */
+        padding: 10px 15px;
+        font-size: 0.85rem;
+    }
+    
+    /* Cache les colonnes de Catégorie et Couleur sur petit écran */
+    .retour-item-row .retour-category,
+    .retour-item-row .retour-couleur {
+        display: none;
+    }
 
-/* La liste "fluide" prend la majorité de la place */
-.retours-list-container{
-flex-grow:999;
-flex-basis:0;
-min-width:70%;
-}
-
-/* Le résumé prend une plus petite place */
-.stock-global-summary{
-flex-grow:1;
-flex-basis:300px; /* Il prend au moins 300px */
-min-width:280px;
-height:fit-content; /* S'adapte à la hauteur du contenu */
-position:sticky;
-top:20px; /* Reste collé en haut quand on scrolle */
+    /* Le span de la Description est mis en gras sur mobile */
+    .retour-item-row .retour-description {
+        font-weight: 600;
+    }
 }
