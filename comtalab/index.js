@@ -1,3 +1,5 @@
+// index.js (Ligne 1)
+require('dotenv').config();
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
@@ -7,7 +9,7 @@ const jwt = require('jsonwebtoken');
 
 // 2. Créer le serveur web
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001
 
 // --- Configuration ---
 const KEY_FILE_PATH = './google-credentials.json';
@@ -690,7 +692,7 @@ app.delete('/api/retours/:id', authenticateToken, (req, res) => {
     console.log(`--- DELETE /api/retours/${retourId} (User ${userId}) ---`);
     if (!db) return res.status(503).json({ error: "Service DB non disponible." });
     
-    // CORRECTION : Utiliser "stock_retours"
+    // CORRECTION : Utiliser "stock_retoursunitPrice"
     db.run(`DELETE FROM "stock_retours" WHERE "id" = ? AND "user_id" = ?`, [retourId, userId], function(err) {
         if (err) { 
             console.error(`Erreur DB DELETE /api/retours/${retourId}:`, err.message); 
@@ -2257,6 +2259,7 @@ app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
 initializeSheetsClient().then(() => {
     app.listen(port, () => {
         console.log(`Serveur backend (MULTI-USER) démarré sur http://localhost:${port}`);
+
     });
 }).catch(initErr => {
     console.error('*** ERREUR CRITIQUE au démarrage (pré-listen):', initErr);
