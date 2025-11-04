@@ -342,9 +342,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
           ))}
         </select>
 
-        <button onClick={() => fetchCommandes(true)} className="btn-refresh-commandes">
-          Rafraîchir
-        </button>
+        
 
         {/* Le bouton d'import est de retour, mais on va le cacher avec le CSS que tu as */}
         <button
