@@ -1,8 +1,7 @@
 // src/pages/RetoursPage.jsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-// On utilise le CSS de StockPage pour les utilitaires (formulaire, boutons, etc.)
 import './StockPage.css'; 
-import './RetoursPage.css'; // Notre nouveau CSS pour la liste compacte
+import './RetoursPage.css'; 
 
 // --- Structure des données articleDetails (Copie du StockPage pour cohérence) ---
 const articleDetails = {
@@ -12,17 +11,17 @@ const articleDetails = {
   'sac a dos': { display: 'Sac à dos', styles: ['standard', 'premium'], aliases: ['sacados'] },
   'autre': { display: 'Autre', styles: [], aliases: [] }
 };
-const articleOrder = Object.keys(articleDetails); // Utilisation des clés pour le tri
+const articleOrder = Object.keys(articleDetails); 
 
 
-// --- Composant Formulaire (Adapté pour /api/retours) ---
+// --- Composant Formulaire AddRetourItemForm (Inchangé, utilise 'token') ---
 function AddRetourItemForm({ onRetourAdded, token }) {
   const nomsDeBaseKeys = Object.keys(articleDetails);
   const [nom, setNom] = useState(''); 
   const [style, setStyle] = useState(''); 
   const [taille, setTaille] = useState(''); 
   const [couleur, setCouleur] = useState(''); 
-  const [description, setDescription] = useState(''); // Le nom spécifique (Hoodie Luffy)
+  const [description, setDescription] = useState(''); 
   const [formError, setFormError] = useState('');
 
   const couleursSuggerees = ['Noir', 'Blanc', 'Gris', 'Bleu', 'Rouge', 'Vert', 'Beige'];
@@ -120,10 +119,10 @@ function AddRetourItemForm({ onRetourAdded, token }) {
       {/* Champ 1: Catégorie */}
       <div className="form-control-stock"> <label>Catégorie*:</label> <select value={nom} onChange={e => handleNomChange(e.target.value)} required> <option value="" disabled>-- Choisir --</option> {nomsDeBaseKeys.map(n => <option key={n} value={n}>{articleDetails[n].display}</option>)} </select> </div>
 
-      {/* Champ 2: Description (Modèle) - AJOUTÉ */}
+      {/* Champ 2: Description (Modèle) */}
       <div className="form-control-stock">
         <label>Description (Modèle)*:</label>
-        <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Hoodie Luffy, T-shirt Naruto" required />
+        <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Hoodie Luffy, T-shirt Real Madrid" required />
       </div>
 
       {/* Champ 3: Style */}
@@ -183,12 +182,12 @@ function RetoursPage({ token }) {
       setError("Impossible de charger les retours: " + err.message);
       setStockItems([]);
     } finally {
-      if (loading) setLoading(false);
+      setLoading(false); 
     }
-  }, [token, loading]);
+  }, [token]);
 
   useEffect(() => {
-    setLoading(true);
+    setLoading(true); 
     if (token) { fetchStock(); }
     else {
       setLoading(false);
@@ -222,8 +221,45 @@ function RetoursPage({ token }) {
     }
   };
 
+ // RetoursPage.jsx
 
-  // --- Logique de Filtrage et de Tri (Adaptée au mode Liste) ---
+const handleDeleteModelGroup = async (item) => {
+    let cardTitle = `${articleDetails[item.nom]?.display} - T:${item.taille || 'Non spécifiée'} - Modèle:${item.description}`;
+    
+    if (!window.confirm(`Es-tu sûr de vouloir supprimer TOUS les retours du modèle "${cardTitle}" ?\nCette action est irréversible !`)) { return; }
+
+    try {
+        const url = `http://localhost:3001/api/retours/group?nom=${encodeURIComponent(item.nom)}&style=${encodeURIComponent(item.style || '')}&taille=${encodeURIComponent(item.taille || '')}&description=${encodeURIComponent(item.description || '')}`;
+        
+        const response = await fetch(url, { 
+            method: 'DELETE', 
+            headers: { 'Authorization': `Bearer ${token}` } 
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            alert(`Groupe de retours supprimé avec succès (${result.message}).`);
+            
+            // --- CORRECTION CRITIQUE : ATTENDRE AVANT LE RECHARGEMENT ---
+            // Ajouter un petit délai pour la stabilité de la DB (50ms)
+            await new Promise(resolve => setTimeout(resolve, 50)); 
+            
+            // Recharger l'état du stock DEPUIS LE SERVEUR
+            fetchStock(); 
+            // ------------------------------------------
+
+        } else {
+            const errorData = await response.json();
+            alert(`Erreur lors de la suppression du groupe: ${errorData.error || response.status}`);
+        }
+    } catch (err) { 
+        alert('Erreur réseau lors de la suppression du groupe.');
+        console.error('Erreur fetch DELETE Retours Group:', err); 
+    }
+};
+
+
+  // --- 1. Logique de Filtrage et de Tri ---
   const filteredRetours = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
     const articleOrderKeys = Object.keys(articleDetails);
@@ -232,8 +268,9 @@ function RetoursPage({ token }) {
       .map(item => {
         const baseInfo = articleDetails[item.nom] || { display: 'Autre' };
         
-        // Construction de la description pour l'affichage et la recherche
-        let descriptionFull = item.description || baseInfo.display;
+        let descriptionBase = item.description || (item.style || item.nom);
+        let descriptionFull = descriptionBase;
+
         if (item.style && item.style !== 'standard') descriptionFull += ` (${item.style})`;
         if (item.couleur) descriptionFull += ` ${item.couleur}`;
         if (item.taille && item.taille !== 'Unique') descriptionFull += ` ${item.taille}`;
@@ -243,16 +280,15 @@ function RetoursPage({ token }) {
           ...item,
           fullDescription: descriptionFull.trim(),
           baseCategory: item.nom, 
-          // Utilisation du nom du style pour l'affichage si la description n'est pas remplie
-          itemDescription: item.description || (item.style || item.nom)
+          itemDescription: descriptionBase,
+          // Clé unique pour le regroupement de modèle
+          groupKey: `${item.nom}-${item.style || ''}-${item.taille || ''}-${item.description || ''}`
         };
       })
       .filter(item => {
-        // 1. Filtre par Catégorie
         const categoryMatch = (articleFilter === 'all') || (item.baseCategory === articleFilter);
         if (!categoryMatch) return false;
 
-        // 2. Filtre par Recherche
         if (term === '') return true;
         return item.fullDescription.toLowerCase().includes(term) || 
                item.itemDescription.toLowerCase().includes(term);
@@ -265,6 +301,28 @@ function RetoursPage({ token }) {
       });
 
   }, [stockItems, articleFilter, searchTerm]);
+
+  // --- 2. Logique de Regroupement pour les Cartes : Article -> Taille ---
+  const { groupedRetoursByArticle, sortedArticleKeys } = useMemo(() => {
+    
+    const grouping = filteredRetours.reduce((acc, item) => {
+        const articleKey = item.baseCategory;
+        const tailleKey = item.taille || 'Taille non spécifiée';
+        
+        if (!acc[articleKey]) acc[articleKey] = {};
+        if (!acc[articleKey][tailleKey]) acc[articleKey][tailleKey] = [];
+        
+        // Regrouper par Modèle/Description + Couleur pour compter les quantités
+        acc[articleKey][tailleKey].push(item);
+
+        return acc;
+    }, {});
+
+    // Tri des articles selon l'ordre défini (articleOrder)
+    const sortedArticleKeys = articleOrder.filter(key => grouping[key]);
+
+    return { groupedRetoursByArticle: grouping, sortedArticleKeys };
+  }, [filteredRetours]);
 
   // --- RENDER ---
   return (
@@ -283,7 +341,7 @@ function RetoursPage({ token }) {
         </select>
       </div>
 
-      <h3>Liste des Retours ({filteredRetours.length} articles)</h3>
+      <h3>Récapitulatif des Retours ({filteredRetours.length} articles)</h3>
 
       {loading ? (
         <p>Chargement des retours...</p>
@@ -292,51 +350,82 @@ function RetoursPage({ token }) {
       ) : (
         <div className="stock-content-wrapper">
 
-          {/* --- NOUVELLE VUE : LISTE COMPACTE (TABLEAU) --- */}
-          <div className="retours-list-container">
+          {/* --- NOUVELLE VUE : CARTES DE TAILLE (INSPIRÉE DU STOCK) --- */}
+          <div className="retours-sections-container"> 
             
             {filteredRetours.length > 0 ? (
-                <>
-                    {/* EN-TÊTE DU TABLEAU */}
-                    <div className="retours-list-header">
-                        <span>Catégorie</span>
-                        <span>Description et Style</span>
-                        <span>Taille</span>
-                        <span>Couleur</span>
-                        <span className="retour-actions"></span> {/* Colonne Actions */}
-                    </div>
+                
+                sortedArticleKeys.map(articleKey => {
+                    const taillesInArticle = groupedRetoursByArticle[articleKey];
+                    const tailleOrder = ['6 ans', '8 ans', '10 ans', '12 ans', '14 ans', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'Unique', 'Taille non spécifiée'];
+
+                    const sortedTailleKeys = Object.keys(taillesInArticle).sort((keyA, keyB) => {
+                        return tailleOrder.indexOf(keyA) - tailleOrder.indexOf(keyB);
+                    });
                     
-                    {/* CORPS DU TABLEAU */}
-                    {filteredRetours.map(item => {
-                        const categoryDisplay = articleDetails[item.nom]?.display || item.nom;
+                    const totalArticleRetours = sortedTailleKeys.reduce((sum, key) => sum + taillesInArticle[key].length, 0);
 
-                        return (
-                            <div key={item.id} className="retour-item-row">
+                    return (
+                        <section key={articleKey} className="article-section">
+                            <h4 className="article-section-title">
+                                {articleDetails[articleKey]?.display || 'Autres Articles'}
+                                <span>({totalArticleRetours} pcs)</span>
+                            </h4>
+                            
+                            <div className="retour-taille-grid">
+                            {/* Les cartes sont les tailles */}
+                            {sortedTailleKeys.map(tailleKey => {
+                                const retoursInTaille = taillesInArticle[tailleKey];
                                 
-                                <span className="retour-category">{categoryDisplay}</span>
+                                // Regroupement final par Description/Modèle/Couleur
+                                const finalGrouping = retoursInTaille.reduce((acc, item) => {
+                                    const key = `${item.description || item.style}-${item.couleur || ''}`;
+                                    if (!acc[key]) acc[key] = { items: [], total: 0, description: item.description, style: item.style, couleur: item.couleur };
+                                    acc[key].items.push(item);
+                                    acc[key].total++;
+                                    return acc;
+                                }, {});
 
-                                <span className="retour-description">
-                                    {item.description || item.style}
-                                    {item.description && item.style && item.style !== 'standard' && ` (${item.style})`}
-                                </span>
+                                return (
+                                    <div key={tailleKey} className="retour-taille-card">
+                                        <h5 className="retour-taille-header">
+                                            Taille: {tailleKey}
+                                            <span>({retoursInTaille.length} pcs)</span>
+                                            {/* Bouton de suppression du modèle/taille */}
+                                            <button 
+                                                onClick={() => handleDeleteModelGroup(retoursInTaille[0])} 
+                                                className="btn-delete-group" 
+                                                title={`Supprimer tous les retours en taille ${tailleKey}`}
+                                            >
+                                                🗑️
+                                            </button>
+                                        </h5>
 
-                                <span className="retour-taille">{item.taille || '-'}</span>
-                                
-                                <span className="retour-couleur">{item.couleur || '-'}</span>
-
-                                <span className="retour-actions">
-                                    <button
-                                        onClick={() => handleDeleteItem(item.id, item.fullDescription)}
-                                        className="btn-delete-group"
-                                        title="Supprimer cet article"
-                                    >
-                                        🗑️
-                                    </button>
-                                </span>
+                                        <ul className="retour-description-list">
+                                            {Object.values(finalGrouping).map((group, index) => (
+                                                <li key={index} className="description-item">
+                                                    <span className="description-details">
+                                                        {group.description || group.style} ({group.couleur})
+                                                    </span>
+                                                    <span className="description-count">{group.total} pcs</span>
+                                                </li>
+                                            ))}
+                                            {/* Liste des IDs individuels pour suppression rapide (optionnel) */}
+                                            {/* {retoursInTaille.map(item => (
+                                                <li key={item.id} className="individual-retour">
+                                                    <span className="individual-details">{item.description} ({item.couleur})</span>
+                                                    <button onClick={() => handleDeleteItem(item.id, item.fullDescription)} className="btn-delete-group-tiny">X</button>
+                                                </li>
+                                            ))} */}
+                                        </ul>
+                                    </div>
+                                );
+                            })}
                             </div>
-                        );
-                    })}
-                </>
+                        </section>
+                    );
+                })
+                
             ) : (
               <p className="empty-summary-message">
                 {stockItems.length > 0 ? "Aucun article ne correspond à votre recherche ou filtre." : "Votre stock de retours est vide."}

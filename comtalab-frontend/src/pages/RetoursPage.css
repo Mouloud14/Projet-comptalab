@@ -1,91 +1,130 @@
-/* src/pages/RetoursPage.css */
+/* src/pages/RetoursPage.css - NOUVELLE VUE CARTE/GRILLE */
 
-/* --- Vue Liste Compacte (Tableau) --- */
-
-/* Le conteneur principal du tableau */
-.retours-list-container {
-    display: block;
-    width: 100%;
-    background-color: var(--card-background); /* Fond blanc */
-    border-radius: 8px;
-    box-shadow: var(--shadow);
-    overflow: hidden; /* Assure que les bordures sont respectées */
+/* Le conteneur principal des sections (Hoodie, T-shirt) */
+.retours-sections-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    margin-top: 20px;
 }
 
-/* En-tête du tableau (Ligne de titres) */
-.retours-list-header {
+/* Style de la section Article (réutilise .article-section) */
+.article-section {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--card-background);
+  box-shadow: var(--shadow);
+  padding: 0;
+  margin-bottom: 25px;
+  overflow: hidden;
+}
+
+/* Titre de la section Article (Hoodie, T-shirt) */
+.article-section-title {
+  color: white;
+  background-color: var(--accent-color);
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 0;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-transform: uppercase;
+}
+.article-section-title span {
+    font-size: 1rem; font-weight: normal; color: rgba(255, 255, 255, 0.8);
+    margin-left: 10px;
+}
+
+/* --- GRILLE DES CARTES DE TAILLE (les cartes S, M, L) --- */
+.retour-taille-grid {
     display: grid;
-    /* Définition des colonnes : Catégorie(100) | Description(Flex) | Taille(80) | Couleur(100) | Actions(40) */
-    grid-template-columns: 100px 1fr 80px 100px 40px; 
-    gap: 10px;
-    padding: 12px 15px;
-    background-color: #e8f5e9; /* Fond vert très clair */
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: var(--text-color);
-    border-bottom: 2px solid var(--accent-color);
+    /* Grille flexible : 2 colonnes sur la plupart des écrans */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px; 
+    padding: 20px;
 }
 
-/* Style de la ligne individuelle de retour */
-.retour-item-row {
-    display: grid;
-    grid-template-columns: 100px 1fr 80px 100px 40px; /* Doit correspondre à l'en-tête */
-    gap: 10px;
-    padding: 10px 15px;
-    font-size: 0.9rem;
-    align-items: center;
-    border-bottom: 1px solid #eee;
-    transition: background-color 0.1s ease;
-}
-
-.retour-item-row:hover {
+.retour-taille-card {
     background-color: #fafafa;
+    border-radius: 6px;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-left: 4px solid var(--accent-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: relative;
 }
 
-/* Mise en gras de la catégorie pour la distinction */
-.retour-item-row .retour-category {
+.retour-taille-header {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    margin: 0 0 10px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px dashed var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.retour-taille-header span {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    font-weight: 500;
+    margin-left: 10px;
+}
+
+/* --- Liste des Descriptions/Modèles à l'intérieur de la carte Taille --- */
+.retour-description-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.retour-description-list .description-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 0.9rem;
+    border-bottom: 1px dotted #e0e0e0;
+}
+.retour-description-list .description-item:last-child {
+    border-bottom: none;
+}
+
+.description-details {
+    font-weight: 500;
+    color: var(--text-color);
+}
+.description-count {
     font-weight: 600;
+    color: var(--accent-color);
 }
 
-/* Style du bouton de suppression (réutilise le style de StockPage.css) */
-.retour-actions {
-    text-align: right;
-}
-.retour-item-row .btn-delete-group {
+/* Bouton de suppression de groupe (réutilisé du stock) */
+.retour-taille-card .btn-delete-group {
+    position: relative; 
+    top: auto; 
+    right: auto;
     background: none;
     border: none;
     color: var(--danger-color);
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     cursor: pointer;
-    padding: 4px;
+    padding: 2px;
     line-height: 1;
-    opacity: 0.6;
+    opacity: 0.7;
     transition: opacity 0.2s ease;
+    margin-left: auto; /* Pousse à droite */
 }
-.retour-item-row:hover .btn-delete-group { opacity: 1; }
+.retour-taille-card .btn-delete-group:hover { opacity: 1; background-color: #ffebeb; border-radius: 4px; }
 
 
 /* --- Responsive --- */
 @media (max-width: 768px) {
-    /* Sur mobile, passage à une vue en liste plus simple */
-    .retours-list-header {
-        display: none; /* Cache l'en-tête pour gagner de la place */
-    }
-    .retour-item-row {
-        /* Simplification des colonnes pour éviter le scroll */
-        grid-template-columns: 1fr 60px 40px; /* Description | Taille | Actions */
-        padding: 10px 15px;
-        font-size: 0.85rem;
-    }
-    
-    /* Cache les colonnes de Catégorie et Couleur sur petit écran */
-    .retour-item-row .retour-category,
-    .retour-item-row .retour-couleur {
-        display: none;
-    }
-
-    /* Le span de la Description est mis en gras sur mobile */
-    .retour-item-row .retour-description {
-        font-weight: 600;
+    .retour-taille-grid {
+        grid-template-columns: 1fr;
+        padding: 15px;
     }
 }

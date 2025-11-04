@@ -106,7 +106,22 @@ CREATE TABLE IF NOT EXISTS stock_items (
             if (err) { return console.error("Erreur création/vérification table stock_items:", err.message); }
             console.log("Table 'stock_items' prête (avec user_id).");
         });
-        
+      const sqlCreateTableRetours = `
+CREATE TABLE IF NOT EXISTS stock_retours (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nom TEXT NOT NULL,
+  taille TEXT,
+  couleur TEXT,
+  style TEXT,
+  description TEXT, 
+  user_id INTEGER NOT NULL, 
+  date_ajout DATETIME DEFAULT CURRENT_TIMESTAMP 
+);
+`;
+        db.run(sqlCreateTableRetours, (err) => {
+            if (err) { return console.error("Erreur création table retours:", err.message); }
+            else { console.log("Table 'stock_retours' prête."); }
+        });
 
 // 3. Commandes (CODE CORRECT avec user_id)
 const sqlCreateTableCommandes = `
@@ -129,26 +144,6 @@ CREATE TABLE IF NOT EXISTS commandes (
             if (err) { return console.error("Erreur création table commandes:", err.message); }
             console.log("Table 'commandes' prête (avec user_id).");
         });
-
-
-// 4. Retours (NOUVEAU CODE)
-const sqlCreateTableRetours = `
-CREATE TABLE IF NOT EXISTS retours (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  nom TEXT NOT NULL,
-  style TEXT,
-  taille TEXT,
-  couleur TEXT,
-  description TEXT,
-  date_ajout DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-`;
-        db.run(sqlCreateTableRetours, (err) => {
-            if (err) { return console.error("Erreur création table retours:", err.message); }
-            console.log("Table 'retours' prête (avec user_id).");
-        });
-
 
 // 4. Utilisateurs (inchangée, mais le mdp sera haché)
 const sqlCreateTableUtilisateurs = `
@@ -417,81 +412,6 @@ app.delete('/api/stock/group', authenticateToken, (req, res) => {
   let sql = `DELETE FROM "stock_items" WHERE "nom" = ? AND "user_id" = ?`;
   const params = [nom, userId];
 
-
-// --- NOUVELLE API RETOURS (SÉCURISÉE) ---
-
-// Récupérer tous les retours de l'utilisateur
-app.get('/api/retours', authenticateToken, (req, res) => {
-    const userId = req.user.id;
-    console.log(`--- GET /api/retours (User ${userId}) ---`);
-    if (!db) return res.status(503).json({ error: "Service DB non disponible." });
-    
-    // Sélectionne tous les champs et trie par date
-    db.all("SELECT * FROM retours WHERE user_id = ? ORDER BY date_ajout DESC", [userId], (err, rows) => {
-        if (err) { console.error("Erreur DB GET /api/retours:", err.message); return res.status(500).json({ error: err.message }); }
-        console.log(`GET /api/retours: ${rows ? rows.length : 0} retours trouvés.`);
-        res.json(rows || []);
-    });
-});
-
-// Ajouter un nouveau retour
-app.post('/api/retours', authenticateToken, (req, res) => {
-    const userId = req.user.id;
-    console.log(`--- POST /api/retours (User ${userId}) ---`, req.body);
-    if (!db) return res.status(503).json({ error: "Service DB non disponible." });
-    
-    const { nom, style, taille, couleur, description } = req.body; 
-    
-    // Validation minimale: nom et description sont requis pour un retour
-    if (!nom || !description) { 
-        console.warn("POST /api/retours: Données invalides (nom ou description manquant)."); 
-        return res.status(400).json({ error: 'Nom et Description sont requis pour ajouter un retour.' }); 
-    }
-    
-    const sql = `INSERT INTO retours (user_id, nom, style, taille, couleur, description) VALUES (?, ?, ?, ?, ?, ?)`;
-    
-    db.run(sql, 
-        [userId, nom, style || null, taille || null, couleur || null, description], 
-        function (err) {
-            if (err) { 
-                console.error("Erreur DB POST /api/retours:", err.message); 
-                return res.status(500).json({ error: err.message }); 
-            }
-            console.log(`POST /api/retours: Nouveau retour inséré (ID: ${this.lastID}).`);
-            res.status(201).json({ 
-                id: this.lastID, 
-                user_id: userId,
-                nom, style, taille, couleur, description 
-            });
-        }
-    );
-});
-
-// Supprimer un retour par ID
-app.delete('/api/retours/:id', authenticateToken, (req, res) => {
-    const userId = req.user.id;
-    const retourId = req.params.id;
-    console.log(`--- DELETE /api/retours/${retourId} (User ${userId}) ---`);
-    if (!db) return res.status(503).json({ error: "Service DB non disponible." });
-    
-    // Suppression sécurisée : vérifie l'ID et l'appartenance à l'utilisateur
-    db.run(`DELETE FROM "retours" WHERE "id" = ? AND "user_id" = ?`, [retourId, userId], function(err) {
-        if (err) { 
-            console.error(`Erreur DB DELETE /api/retours/${retourId}:`, err.message); 
-            return res.status(500).json({ error: err.message }); 
-        }
-        if (this.changes === 0) { 
-            console.warn(`DELETE /api/retours/${retourId}: Retour non trouvé ou non autorisé.`); 
-            return res.status(404).json({ message: "Retour non trouvé ou non autorisé" }); 
-        }
-        console.log(`DELETE /api/retours/${retourId}: Retour supprimé.`);
-        res.status(200).json({ message: "Retour supprimé" });
-    });
-});
-
-// --- FIN API RETOURS ---
-
-// ... (Le code de l'API Commandes suit ici, inchangé)
   // --- LOGIQUE CORRIGÉE POUR LA COULEUR ---
   // Si la couleur est 'null' (envoyée par ton code) ou 'Sans couleur' (envoyée par l'ancien code)
   if (couleur === 'null' || couleur === 'Sans couleur' || couleur === undefined || couleur === '') {
@@ -550,7 +470,6 @@ app.delete('/api/stock/:id', authenticateToken, (req, res) => {
 // --- FIN API STOCK ---
 
 
-// --- API Commandes (SÉCURISÉE) ---
 app.get('/api/commandes', authenticateToken, (req, res) => {
     const userId = req.user.id;
     console.log(`--- GET /api/commandes (User ${userId}) ---`);
@@ -583,130 +502,8 @@ app.post('/api/commandes', authenticateToken, (req, res) => {
     });
 });
 
-app.put('/api/commandes/:id', authenticateToken, async (req, res) => {
-  const userId = req.user.id;
-  const commandeId = req.params.id;
-  console.log(`--- PUT /api/commandes/${commandeId} (User ${userId}) ---`, req.body);
-  if (!db) return res.status(503).json({ error: "Service DB non disponible." });
+// index.js (Ajouter ceci temporairement après app.get('/api/retours', ...))
 
-  const { telephone, nom_prenom, adresse, type_livraison, articles, prix_total, date_commande, date_livraison, etat: newEtat, commentaire } = req.body;
-
-  // Conversion des articles en JSON
-  let articlesJson = null;
-  try {
-        if (articles && typeof articles === 'object') articlesJson = JSON.stringify(articles);
-        else if (typeof articles === 'string') { try { JSON.parse(articles); articlesJson = articles; } catch (e) { articlesJson = JSON.stringify([]); } }
-        else articlesJson = JSON.stringify([]);
-  } catch (e) { console.error("Erreur stringify articles:", e); articlesJson = JSON.stringify([]); }
-
-  // --- NOUVEAU : Récupérer l'état actuel AVANT la mise à jour ---
-  let oldCommandeData;
-  try {
-    oldCommandeData = await new Promise((resolve, reject) => {
-      // Ajout de "AND user_id = ?"
-      db.get('SELECT "articles", "etat" FROM "commandes" WHERE "id" = ? AND "user_id" = ?', [commandeId, userId], (err, row) => {
-        if (err) return reject(err);
-        if (!row) return reject(new Error('Commande non trouvée ou non autorisée.'));
-        resolve(row);
-      });
-    });
-  } catch (err) {
-    console.error(`Erreur DB GET avant PUT /api/commandes/${commandeId}:`, err.message);
-    return res.status(err.message.includes('non trouvée') ? 404 : 500).json({ error: err.message });
-  }
-  const oldEtat = oldCommandeData.etat;
-  const articlesAnciensJson = oldCommandeData.articles;
-  // --- FIN Récupération état ---
-
-  // --- Mise à jour de la commande (requête principale) ---
-  // Ajout de "AND user_id = ?"
-  db.run(`UPDATE "commandes" SET "telephone" = ?, "nom_prenom" = ?, "adresse" = ?, "type_livraison" = ?, "articles" = ?, "prix_total" = ?, "date_commande" = ?, "date_livraison" = ?, "etat" = ?, "commentaire" = ? WHERE "id" = ? AND "user_id" = ?`,
-    [telephone || null, nom_prenom || null, adresse || null, type_livraison || null, articlesJson, parseFloat(prix_total), date_commande, date_livraison || null, newEtat, commentaire || null, commandeId, userId],
-    async function(err) {
-      if (err) {
-        console.error(`Erreur DB UPDATE /api/commandes/${commandeId}:`, err.message);
-        return res.status(500).json({ error: err.message });
-      }
-      if (this.changes === 0) {
-        // Devrait être impossible si l'étape précédente a réussi, mais par sécurité
-        console.warn(`PUT /api/commandes/${commandeId}: Commande non trouvée (ou non autorisée) lors de la mise à jour.`);
-        return res.status(404).json({ message: "Commande non trouvée ou non autorisée" });
-      }
-
-      console.log(`PUT /api/commandes/${commandeId}: Commande mise à jour.`);
-
-      // --- Logique de mise à jour du stock (MAJ SÉCURITÉ) ---
-      const doitDecrementerStock =
-        (newEtat === 'prêt a livrer' || newEtat === 'envoyé') &&
-        oldEtat !== 'prêt a livrer' && oldEtat !== 'envoyé';
-
-      if (doitDecrementerStock) {
-        console.log(`Commande ${commandeId}: Passage à "${newEtat}". Décrémentation stock (User ${userId})...`);
-        try {
-          const articlesCommande = JSON.parse(articlesAnciensJson || '[]');
-          if (!Array.isArray(articlesCommande)) {
-            throw new Error("Format des articles invalide.");
-          }
-
-          for (const article of articlesCommande) {
-            const { nom, couleur, taille, style, quantite: qteCommandee } = article;
-            if (!nom || !couleur || qteCommandee === undefined || isNaN(parseInt(qteCommandee)) || parseInt(qteCommandee) <= 0) {
-              console.warn(`Article invalide ignoré dans commande ${commandeId}:`, article);
-              continue;
-            }
-
-            const qteADeduire = parseInt(qteCommandee);
-            const tailleFinal = taille ? taille : null;
-            const styleFinal = style ? style : null;
-
-            // Ajout de "AND user_id = ?"
-            // S'assure qu'on décrémente le stock DU BON UTILISATEUR
-            const sqlUpdateStock = `
-              UPDATE "stock_items"
-              SET "quantite" = "quantite" - ?
-              WHERE "nom" = ?
-                AND "couleur" = ?
-                AND ("taille" = ? OR ("taille" IS NULL AND ? IS NULL))
-                AND ("style" = ? OR ("style" IS NULL AND ? IS NULL))
-                AND "quantite" >= ?
-                AND "user_id" = ? 
-            `;
-            const paramsUpdateStock = [
-              qteADeduire,
-              nom,
-              couleur,
-              tailleFinal, tailleFinal,
-              styleFinal, styleFinal,
-              qteADeduire,
-              userId // <-- SÉCURITÉ
-            ];
-
-            console.log("Exécution SQL Update Stock:", sqlUpdateStock, paramsUpdateStock);
-
-            await new Promise((resolve) => {
-              db.run(sqlUpdateStock, paramsUpdateStock, function(errUpdateStock) {
-                if (errUpdateStock) {
-                  console.error(`Erreur DB UPDATE Stock (Cmd ${commandeId}):`, errUpdateStock.message);
-                } else if (this.changes === 0) {
-                  console.warn(`Stock non mis à jour pour ${nom}/${couleur} (Cmd ${commandeId}, User ${userId}). Stock insuffisant ou article non trouvé.`);
-                } else {
-                  console.log(`Stock mis à jour pour ${nom}/${couleur} (Cmd ${commandeId}): -${qteADeduire}`);
-                }
-                resolve();
-              });
-            });
-          }
-          console.log(`Commande ${commandeId}: MàJ stock terminée.`);
-        } catch (parseOrUpdateError) {
-          console.error(`Erreur MàJ stock pour commande ${commandeId}:`, parseOrUpdateError);
-        }
-      }
-      // --- FIN Logique stock ---
-
-      res.json({ id: commandeId, ...req.body, articles: JSON.parse(articlesJson) });
-    }
-  ); // Fin db.run UPDATE commandes
-});
 
 // ... dans la section API Commandes ...
 
@@ -814,7 +611,143 @@ app.post('/api/login', (req, res) => {
       });
   });
 });
+// --- API RETOURS (CORRIGÉE, Ordonnée pour éviter les 404) ---
 
+// 1. DELETE GROUPE (Plus spécifique)
+app.delete('/api/retours/group', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const { nom, style, taille, description } = req.query;
+    
+    console.log(`DELETE GROUP INIT:`, req.query); 
+
+    if (!db) return res.status(503).json({ error: "Service DB non disponible." });
+    
+    if (!nom || !description) { 
+        return res.status(400).json({ error: "Les paramètres 'nom' et 'description' sont requis." }); 
+    }
+
+    // --- PRÉPARATION DES VALEURS SQL ---
+    const cleanValue = (val) => {
+        if (val === 'null' || val === '' || val === 'Taille non spécifiée') {
+            return null;
+        }
+        return val;
+    };
+
+    const nomFinal = cleanValue(nom);
+    const descFinal = cleanValue(description);
+    const styleFinal = cleanValue(style);
+    const tailleFinal = cleanValue(taille);
+    
+    if (!nomFinal || !descFinal) {
+         return res.status(400).json({ error: "Catégorie ou description finale est vide après nettoyage." });
+    }
+
+    // Requête DELETE utilisant la logique IS NULL pour les champs non spécifiés
+    let sqlParts = [`"user_id" = ?`, `"nom" = ?`];
+    let finalParams = [userId, nomFinal];
+
+    const addCondition = (field, value) => {
+        if (value === null) {
+            // Recherche de NULL ou de chaîne vide si le champ est non-spécifié
+            sqlParts.push(`("${field}" IS NULL OR "${field}" = '')`);
+        } else {
+            sqlParts.push(`"${field}" = ?`);
+            finalParams.push(value);
+        }
+    };
+    
+    addCondition('description', descFinal);
+    addCondition('style', styleFinal);
+    addCondition('taille', tailleFinal);
+
+    let sql = `DELETE FROM "stock_retours" WHERE ` + sqlParts.join(' AND ');
+
+    console.log("SQL DELETE Retours Group CHECK:", sql, finalParams); 
+
+    db.run(sql, finalParams, function (err) {
+        if (err) { 
+            console.error("Erreur DB DELETE /api/retours/group:", err.message); 
+            return res.status(500).json({ error: "Erreur serveur lors de la suppression du groupe de retours." }); 
+        }
+        
+        if (this.changes === 0) { 
+            console.warn(`DELETE GROUP 404: Aucune ligne supprimée. Critères recherchés :`, finalParams); 
+            return res.status(404).json({ message: 'Aucun retour correspondant n\'a été trouvé.' }); 
+        }
+        
+        console.log(`DELETE GROUP SUCCESS: ${this.changes} article(s) supprimé(s).`);
+        res.status(200).json({ message: `Groupe de retours supprimé avec succès (${this.changes} articles).` });
+    });
+});
+// -----------------------------------------------------
+
+
+// 2. DELETE ARTICLE INDIVIDUEL (Par ID)
+app.delete('/api/retours/:id', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const retourId = req.params.id;
+    console.log(`--- DELETE /api/retours/${retourId} (User ${userId}) ---`);
+    if (!db) return res.status(503).json({ error: "Service DB non disponible." });
+    
+    // CORRECTION : Utiliser "stock_retours"
+    db.run(`DELETE FROM "stock_retours" WHERE "id" = ? AND "user_id" = ?`, [retourId, userId], function(err) {
+        if (err) { 
+            console.error(`Erreur DB DELETE /api/retours/${retourId}:`, err.message); 
+            return res.status(500).json({ error: err.message }); 
+        }
+        if (this.changes === 0) { 
+            return res.status(404).json({ message: "Retour non trouvé ou non autorisé" }); 
+        }
+        res.status(200).json({ message: "Retour supprimé" });
+    });
+});
+// -----------------------------------------------------
+
+
+// 3. GET TOUS LES RETOURS
+app.get('/api/retours', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    console.log(`--- GET /api/retours (User ${userId}) ---`);
+    if (!db) return res.status(503).json({ error: "Service DB non disponible." });
+    
+    // CORRECTION : Utiliser "stock_retours" et trier par date_ajout
+    db.all("SELECT * FROM stock_retours WHERE user_id = ? ORDER BY date_ajout DESC", [userId], (err, rows) => {
+        if (err) { console.error("Erreur DB GET /api/retours:", err.message); return res.status(500).json({ error: err.message }); }
+        console.log(`GET /api/retours: ${rows ? rows.length : 0} retours trouvés.`);
+        res.json(rows || []);
+    });
+});
+// -----------------------------------------------------
+
+
+// 4. POST NOUVEAU RETOUR
+app.post('/api/retours', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    console.log(`--- POST /api/retours (User ${userId}) ---`, req.body);
+    if (!db) return res.status(503).json({ error: "Service DB non disponible." });
+    
+    const { nom, style, taille, couleur, description } = req.body; 
+    
+    if (!nom || !description) { 
+        return res.status(400).json({ error: 'Nom et Description sont requis pour ajouter un retour.' }); 
+    }
+    
+    // CORRECTION : Utiliser "stock_retours"
+    const sql = `INSERT INTO stock_retours (user_id, nom, style, taille, couleur, description) VALUES (?, ?, ?, ?, ?, ?)`;
+    
+    db.run(sql, 
+        [userId, nom, style || null, taille || null, couleur || null, description], 
+        function (err) {
+            if (err) { 
+                console.error("Erreur DB POST /api/retours:", err.message); 
+                return res.status(500).json({ error: err.message }); 
+            }
+            res.status(201).json({ id: this.lastID, user_id: userId, nom, style, taille, couleur, description });
+        }
+    );
+});
+// -----------------------------------------------------
 // Met à jour l'URL du sheet pour l'utilisateur connecté
 app.put('/api/user/sheet', authenticateToken, (req, res) => {
     const userId = req.user.id;
