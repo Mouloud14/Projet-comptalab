@@ -23,7 +23,7 @@ function HomePage({ username, currentBalance, token, transactionsDuJour }) {
       setLoading(true);
       try {
         // On n'appelle plus /api/stock-low
-        const response = await fetch('http://localhost:3001/api/dashboard-summary', {
+        const response = await fetch('http://localhost:3001/api', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
