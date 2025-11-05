@@ -1,5 +1,84 @@
 // index.js (Version PostgreSQL pour Render/Neon)
+// index.js (ZONE DE DÉFINITIONS GLOBALES - À INSÉRER)
 
+const PRIX_WILAYAS = {
+  'adrar': { names: ['adrar', 'أدرار'], prices: { 'a domicile': 1400, 'bureau': 970, 'autre': 970 } },
+  'chlef': { names: ['chlef', 'الشلف'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'laghouat': { names: ['laghouat', 'الأغواط'], prices: { 'a domicile': 950, 'bureau': 620, 'autre': 620 } },
+  'oumelbouaghi': { names: ['oumelbouaghi', 'أم البواقي'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'batna': { names: ['batna', 'باتنة'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'bejaia': { names: ['bejaia', 'بجاية'], prices: { 'a domicile': 750, 'bureau': 520, 'autre': 520 } },
+  'biskra': { names: ['biskra', 'بسكرة'], prices: { 'a domicile': 950, 'bureau': 620, 'autre': 620 } },
+  'bechar': { names: ['bechar', 'بشار'], prices: { 'a domicile': 1100, 'bureau': 720, 'autre': 720 } },
+  'blida': { names: ['blida', 'البليدة'], prices: { 'a domicile': 750, 'bureau': 470, 'autre': 470 } },
+  'bouira': { names: ['bouira', 'البويرة'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'tamanrasset': { names: ['tamanrasset', 'تمنراست'], prices: { 'a domicile': 1500, 'bureau': 1120, 'autre': 1120 } },
+  'tebessa': { names: ['tebessa', 'تبسة'], prices: { 'a domicile': 900, 'bureau': 520, 'autre': 520 } },
+  'tlemcen': { names: ['tlemcen', 'تلمسان'], prices: { 'a domicile': 850, 'bureau': 570, 'autre': 570 } },
+  'tiaret': { names: ['tiaret', 'تيارت'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'tiziouzou': { names: ['tiziouzou', 'tizi ouzou', 'تيزي وزو'], prices: { 'a domicile': 500, 'bureau': 370, 'autre': 370 } },
+  'alger': { names: ['alger', 'الجزائر'], prices: { 'a domicile': 700, 'bureau': 470, 'autre': 470 } },
+  'djelfa': { names: ['djelfa', 'الجلفة'], prices: { 'a domicile': 950, 'bureau': 620, 'autre': 620 } },
+  'jijel': { names: ['jijel', 'جيجل'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'setif': { names: ['setif', 'سطيف'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'saida': { names: ['saida', 'سعيدة'], prices: { 'a domicile': 850, 'bureau': 570, 'autre': 570 } },
+  'skikda': { names: ['skikda', 'سكيكدة'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'sidibelabbes': { names: ['sidibelabbes', 'sidi bel abbes', 'سيدي بلعباس'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'annaba': { names: ['annaba', 'عنابة'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'guelma': { names: ['guelma', 'قالمة'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'constantine': { names: ['constantine', 'قسنطينة'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'medea': { names: ['medea', 'المدية'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'mostaganem': { names: ['mostaganem', 'مستغانم'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'msila': { names: ['msila', 'المسيلة'], prices: { 'a domicile': 850, 'bureau': 570, 'autre': 570 } },
+  'mascara': { names: ['mascara', 'معسكر'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'ouargla': { names: ['ouargla', 'ورقلة'], prices: { 'a domicile': 950, 'bureau': 670, 'autre': 670 } },
+  'oran': { names: ['oran', 'وهران'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'elbayadh': { names: ['elbayadh', 'البيض'], prices: { 'a domicile': 1050, 'bureau': 670, 'autre': 670 } },
+  'illizi': { names: ['illizi', 'إليزي'], prices: { 'a domicile': 0, 'bureau': 0, 'autre': 0 } },
+  'bordjbouarreridj': { names: ['bordjbouarreridj', 'bordj bou arreridj', 'برج بوعريريج'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'boumerdes': { names: ['boumerdes', 'بومرداس'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'eltarf': { names: ['eltarf', 'الطارف'], prices: { 'a domicile': 850, 'bureau': 520, 'autre': 520 } },
+  'tindouf': { names: ['tindouf', 'تندوف'], prices: { 'a domicile': 0, 'bureau': 0, 'autre': 0 } },
+  'tissemsilt': { names: ['tissemsilt', 'تيسمسيلت'], prices: { 'a domicile': 900, 'bureau': 520, 'autre': 520 } },
+  'eloued': { names: ['eloued', 'el oued', 'الوادي'], prices: { 'a domicile': 950, 'bureau': 670, 'autre': 670 } },
+  'khenchela': { names: ['khenchela', 'خنشلة'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'soukahras': { names: ['soukahras', 'souk ahras', 'سوق أهراس'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'tipaza': { names: ['tipaza', 'تيبازة'], prices: { 'a domicile': 850, 'bureau': 520, 'autre': 520 } },
+  'mila': { names: ['mila', 'ميلة'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'aindefla': { names: ['aindefla', 'ain defla', 'عين الدفلى'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'naama': { names: ['naama', 'النعامة'], prices: { 'a domicile': 1100, 'bureau': 670, 'autre': 670 } },
+  'aintemouchent': { names: ['aintemouchent', 'ain temouchent', 'عين تموشنت'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'ghardaia': { names: ['ghardaia', 'غرداية'], prices: { 'a domicile': 950, 'bureau': 670, 'autre': 670 } },
+  'relizane': { names: ['relizane', 'غليزان'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
+  'timimoun': { names: ['timimoun', 'تيميمون'], prices: { 'a domicile': 1400, 'bureau': 0, 'autre': 0 } },
+  'bordjbadjimokhtar': { names: ['bordjbadjimokhtar', 'برج باجي مختار'], prices: { 'a domicile': 0, 'bureau': 0, 'autre': 0 } },
+  'ouleddjellal': { names: ['ouleddjellal', 'أولاد جلال'], prices: { 'a domicile': 950, 'bureau': 620, 'autre': 620 } },
+  'beniabbes': { names: ['beniabbes', 'بني عباس'], prices: { 'a domicile': 1000, 'bureau': 970, 'autre': 970 } },
+  'insalah': { names: ['insalah', 'عين صالح'], prices: { 'a domicile': 1500, 'bureau': 0, 'autre': 0 } },
+  'inguezzam': { names: ['inguezzam', 'عين قزام'], prices: { 'a domicile': 1500, 'bureau': 0, 'autre': 0 } },
+  'touggourt': { names: ['touggourt', 'تقرت'], prices: { 'a domicile': 950, 'bureau': 670, 'autre': 670 } },
+  'djanet': { names: ['djanet', 'جانت'], prices: { 'a domicile': 0, 'bureau': 0, 'autre': 0 } },
+  'mghair': { names: ['mghair', 'المغير'], prices: { 'a domicile': 950, 'bureau': 0, 'autre': 0 } },
+  'meniaa': { names: ['meniaa', 'المنيعة'], prices: { 'a domicile': 1000, 'bureau': 0, 'autre': 0 } },
+  'defaut': { names: [], prices: { 'a domicile': 650, 'bureau': 600, 'autre': 600 } }
+};
+
+const BUNDLES = {
+  'ensemble_premium': { names: ['ensemble premium', 'pack premium'], cost: 1650 + 1200 },
+  'ensemble_standard': { names: ['ensemble', 'pack standard', 'ensemble standard'], cost: 1260 + 1200 }
+};
+
+const articleDetails = {
+  'tshirt': { display: 'T-shirt', aliases: ['t shirt', 't-shirt'], styles: ['oversize', 'oversize premium', 'regular', 'enfant'], prix: { 'oversize': 950, 'oversize premium': 1150, 'regular': 790, 'enfant': 620 } },
+  'hoodie': { display: 'Hoodie', aliases: ['sweat'], styles: ['premium', 'enfant', 'standard', 'oversize'], prix: { 'premium': 1650, 'enfant': 1300, 'standard': 1260,'oversize': 1600 } },
+  'jogging': { display: 'Jogging', aliases: [], styles: ['oversize elastiqué', 'elastiqué normal', 'open leg'], prix: { 'oversize elastiqué': 1180, 'elastiqué normal': 1200, 'open leg': 1200 } },
+  'sac a dos': { display: 'Sac à dos', aliases: ['sacados', 'sac à dos'], styles: ['standard', 'premium'], prix: { 'standard': 1150, 'premium': 1220 } },
+  'autre': { display: 'Autre', aliases: [], styles: [], prix: {} }
+};
+
+// ... (Ajoutez ici toutes les autres fonctions utilitaires nécessaires: parseArticleCost, etc.) ...
+
+// --- Début du code des APIs ---
 // 1. IMPORTS
 require('dotenv').config(); // CHARGE LES VARIABLES D'ENVIRONNEMENT
 const express = require('express');
@@ -11,7 +90,7 @@ const jwt = require('jsonwebtoken');
 
 // 2. CRÉER LE SERVEUR WEB
 const app = express();
-const port = process.env.PORT || 3001
+// La variable port sera déclarée dans l'écoute (app.listen) pour éviter les problèmes de portée
 
 // --- Configuration ---
 const KEY_FILE_PATH = './google-credentials.json';
@@ -28,10 +107,8 @@ const RANGE_READ = "'Feuille 2'!A:J";
 // Lettre de la colonne "etat de livraison" (c'est la 9ème, donc 'I')
 const STATUS_COLUMN_LETTER = 'I';
 
-// --- Initialisation Google Sheets API Client (inchangé) ---
+// --- Initialisation Google Sheets API Client (Corrigé pour lire les variables d'env) ---
 let sheets;
-
-// index.js (Mise à jour de initializeSheetsClient)
 
 async function initializeSheetsClient() {
     console.log('Tentative d\'initialisation du client Google Sheets...');
@@ -56,14 +133,11 @@ async function initializeSheetsClient() {
         sheets = google.sheets({ version: 'v4', auth: authClient });
         console.log('Client Google Sheets initialisé avec succès.');
     } catch (err) {
-        // Ancienne référence: keyFile: KEY_FILE_PATH, est maintenant obsolète
         console.error('*** ERREUR CRITIQUE: Initialisation du client Google Sheets échouée:');
         console.error(err);
         sheets = null;
     }
 }
-// Mise à jour: Retirer la ligne suivante car elle n'est plus utilisée
-// const KEY_FILE_PATH = './google-credentials.json';
 // --- FIN Google Sheets ---
 
 // 3. Middlewares
@@ -209,7 +283,7 @@ try {
 // --- FIN Connexion DB ---
 
 
-// --- NOUVEAU : Middleware d'authentification ---
+// --- Middleware d'authentification ---
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; 
@@ -231,27 +305,23 @@ function authenticateToken(req, res, next) {
     });
 }
 
-
 // --- API Transactions (CONVERTI en PG) ---
 
 app.get('/', (req, res) => { res.send('API Comptalab (PostgreSQL) fonctionne !'); });
 
-// index.js (ROUTE GET /api/transactions)
-
-app.get('/api/transactions', authenticateToken, async (req, res) => { // AJOUTER 'async'
+app.get('/api/transactions', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     console.log(`--- GET /api/transactions (User ${userId}) ---`);
     if (!db) return res.status(503).json({ error: "Service DB non disponible." });
     
     try {
-        // CONVERSION : Utilise await db.query avec $1 (PostgreSQL)
         const { rows } = await db.query(`SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC`, [userId]);
         
         console.log(`GET /api/transactions: ${rows ? rows.length : 0} transactions trouvées.`);
         res.json(rows || []);
     } catch (err) {
         console.error("Erreur DB GET /api/transactions:", err.message);
-        res.status(500).json({ error: "Erreur serveur lors de la récupération des transactions." });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -711,7 +781,7 @@ app.delete('/api/commandes/:id', authenticateToken, async (req, res) => {
 });
 
 
-// --- ROUTE DASHBOARD (Doit être convertie vers await db.query) ---
+// --- ROUTE DASHBOARD (A adapter pour PostgreSQL) ---
 
 // GET /api/dashboard-summary (Conversion simplifiée)
 app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
@@ -727,10 +797,101 @@ app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
 app.get('/', (req, res) => { res.send('API Comptalab (PostgreSQL) fonctionne !'); });
 
 initializeSheetsClient().then(() => {
+    // NOUVEAU : Déclaration de 'port' ici pour garantir l'initialisation
+    const port = process.env.PORT || 3001; 
+    
     app.listen(port, () => {
         console.log(`Serveur backend (PostgreSQL) démarré sur http://localhost:${port}`);
     });
 }).catch(initErr => {
     console.error('*** ERREUR CRITIQUE au démarrage (pré-listen):', initErr);
     process.exit(1);
+});
+
+// index.js (ROUTE GET /api/financial-summary)
+
+app.get('/api/financial-summary', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const { filter = 'actifs' } = req.query; 
+
+    console.log(`--- GET /api/financial-summary (User ${userId}, Filtre: ${filter}) ---`);
+    if (!sheets) return res.status(503).json({ error: "Service Google Sheets non disponible." });
+    if (!db) return res.status(503).json({ error: "Service DB non disponible." });
+    
+    try {
+        const statutsActifsRaw = ['En préparation', 'Confirmé', 'Prêt à Livrer', 'Echange'];
+        const normalizedStatutsActifs = statutsActifsRaw.map(s => normalizeStatus(s));
+        const normalizedFilter = normalizeStatus(filter);
+        
+        let sql = `SELECT prix_total, type_livraison, adresse, articles, etat FROM commandes WHERE user_id = $1`;
+        const params = [userId];
+
+        if (normalizedFilter === 'tous') {
+            sql += ` AND etat != 'annulé' AND etat != 'non confirmé'`;
+        } else if (normalizedFilter === 'actifs') {
+            // Utilise la syntaxe PostgreSQL $2, $3, ...
+            sql += ` AND etat IN (${normalizedStatutsActifs.map((_, i) => `$${i + 2}`).join(',')})`;
+            params.push(...normalizedStatutsActifs);
+        } else {
+            sql += ` AND etat = $2`;
+            params.push(normalizedFilter); 
+        }
+
+        // CONVERSION CRITIQUE: db.all -> await db.query
+        const { rows: commandes } = await db.query(sql, params);
+
+        if (!commandes || commandes.length === 0) {
+            return res.json({ totalCommandes: 0, totalLivraison: 0, totalCoutArticles: 0, gainPotentiel: 0 });
+        }
+
+        // --- Le reste de la logique de calcul (synchrone) doit maintenant fonctionner ---
+        let totalCommandes = 0;
+        let totalLivraison = 0;
+        let totalCoutArticles = 0; 
+
+        for (const cmd of commandes) {
+            const prix_total = parseFloat(cmd.prix_total) || 0;
+            const typeLivraison = (cmd.type_livraison || 'autre').toLowerCase().trim();
+            const adresseText = (cmd.adresse || '').toLowerCase(); 
+            const articlesText = (cmd.articles || ''); 
+            
+            totalCommandes += prix_total;
+            // NOTE : parseArticleCost doit être défini
+            totalCoutArticles += parseArticleCost(articlesText); 
+
+            let coutLivraison = 0;
+            if (typeLivraison === 'main a main') {
+                coutLivraison = 0;
+            } else if (typeLivraison === 'a domicile' || typeLivraison === 'bureau') {
+                coutLivraison = PRIX_WILAYAS.defaut.prices[typeLivraison] || PRIX_WILAYAS.defaut.prices['autre'];
+                let wilayaTrouvee = false;
+                for (const wilayaKey in PRIX_WILAYAS) {
+                    if (wilayaKey === 'defaut') continue;
+                    const wilayaData = PRIX_WILAYAS[wilayaKey];
+                    for (const nom of wilayaData.names) {
+                        if (adresseText.includes(nom)) {
+                            coutLivraison = wilayaData.prices[typeLivraison] || wilayaData.prices['autre'];
+                            wilayaTrouvee = true;
+                            break;
+                        }
+                    }
+                    if (wilayaTrouvee) break;
+                }
+            }
+            totalLivraison += coutLivraison;
+        }
+
+        const gainNetPotentiel = totalCommandes - totalLivraison - totalCoutArticles;
+
+        res.json({
+            totalCommandes,
+            totalLivraison,
+            totalCoutArticles,
+            gainPotentiel: gainNetPotentiel
+        });
+
+    } catch (err) {
+        console.error("Erreur DB GET /api/financial-summary:", err.message);
+        res.status(500).json({ error: `Erreur serveur lors de la récupération du résumé : ${err.message}` });
+    }
 });
