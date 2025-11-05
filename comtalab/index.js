@@ -31,22 +31,39 @@ const STATUS_COLUMN_LETTER = 'I';
 // --- Initialisation Google Sheets API Client (inchangé) ---
 let sheets;
 
+// index.js (Mise à jour de initializeSheetsClient)
+
 async function initializeSheetsClient() {
-  console.log('Tentative d\'initialisation du client Google Sheets...');
-  try {
-    const auth = new google.auth.GoogleAuth({
-      keyFile: KEY_FILE_PATH,
-      scopes: SCOPES,
-    });
-    const authClient = await auth.getClient();
-    sheets = google.sheets({ version: 'v4', auth: authClient });
-    console.log('Client Google Sheets initialisé avec succès.');
-  } catch (err) {
-    console.error('*** ERREUR CRITIQUE: Initialisation du client Google Sheets échouée:');
-    console.error(err);
-    sheets = null;
-  }
+    console.log('Tentative d\'initialisation du client Google Sheets...');
+    try {
+        // VÉRIFICATION CRITIQUE : Lire le JSON directement depuis la variable d'environnement
+        const credentialsJSON = process.env.GOOGLE_CREDENTIALS; 
+        
+        if (!credentialsJSON) {
+            console.error('*** ERREUR CRITIQUE: GOOGLE_CREDENTIALS non défini dans les variables d\'environnement.');
+            sheets = null;
+            return;
+        }
+        
+        // Convertir la chaîne JSON en objet
+        const credentials = JSON.parse(credentialsJSON);
+
+        const auth = new google.auth.GoogleAuth({
+            credentials: credentials, // Utilisation de l'objet credentials directement
+            scopes: SCOPES,
+        });
+        const authClient = await auth.getClient();
+        sheets = google.sheets({ version: 'v4', auth: authClient });
+        console.log('Client Google Sheets initialisé avec succès.');
+    } catch (err) {
+        // Ancienne référence: keyFile: KEY_FILE_PATH, est maintenant obsolète
+        console.error('*** ERREUR CRITIQUE: Initialisation du client Google Sheets échouée:');
+        console.error(err);
+        sheets = null;
+    }
 }
+// Mise à jour: Retirer la ligne suivante car elle n'est plus utilisée
+// const KEY_FILE_PATH = './google-credentials.json';
 // --- FIN Google Sheets ---
 
 // 3. Middlewares
