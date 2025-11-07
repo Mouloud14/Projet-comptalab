@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+=======
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 import './CommandesPage.css';
 
 // --- Fonction formatArgent ---
@@ -92,7 +96,11 @@ function CommandesPage({ token, user, onUserUpdate }) {
   // --- Fonction pour le résumé financier ---
   const fetchSummary = useCallback(async () => {
     if (!token) return;
+<<<<<<< HEAD
     console.log(` -> Appel fetchSummary avec filtre: ${statusFilter}`); 
+=======
+    console.log(` -> Appel fetchSummary avec filtre: ${statusFilter}`); // Log de débogage
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
     const filterParam = encodeURIComponent(statusFilter);
     try {
       const response = await fetch(`http://localhost:3001/api/financial-summary?filter=${filterParam}`, {
@@ -104,7 +112,11 @@ function CommandesPage({ token, user, onUserUpdate }) {
     } catch (err) {
       console.error("Erreur fetchSummary:", err);
       setFinancialSummary({ gainPotentiel: 0, totalCommandes: 0, totalLivraison: 0, totalCoutArticles: 0 });
+<<<<<<< HEAD
       setError(`Erreur calcul résumé: ${err.message}`); 
+=======
+      setError(`Erreur calcul résumé: ${err.message}`); // Affiche l'erreur
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
     }
   }, [token, statusFilter]);
 
@@ -139,6 +151,11 @@ function CommandesPage({ token, user, onUserUpdate }) {
 
     } catch (err) {
       console.error("Erreur handleImport:", err);
+<<<<<<< HEAD
+=======
+      // Ne met pas d'erreur persistante si le problème est juste 'Aucun lien Google Sheet',
+      // car le formulaire d'URL prend le dessus.
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
       if (err.message && !err.message.includes("Aucun lien Google Sheet")) {
         setError(`Erreur d'importation: ${err.message}`);
       }
@@ -158,6 +175,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
       return;
     }
 
+<<<<<<< HEAD
     // --- Logique de Chargement Initial (Exécuté une seule fois par session) ---
     if (!hasInitialImportRun.current) {
       const initialLoad = async () => {
@@ -201,6 +219,46 @@ function CommandesPage({ token, user, onUserUpdate }) {
 
   // Dépendances : Gardez-les ainsi
   }, [token, statusFilter, fetchCommandes, fetchSummary, handleImport]);
+=======
+    const loadData = async () => {
+      setLoading(true); 
+      setError('');
+      
+      try {
+        // 🚨 CORRECTION CRITIQUE : Synchronisation Silencieuse au Démarrage
+        // Ceci garantit que les données sont propres (DELETE + INSERT) AVANT d'être lues.
+        if (allCommandes.length === 0) {
+          console.log("Début de la synchronisation silencieuse initiale...");
+          // Tente l'importation sans alerte (false)
+          await handleImport(false); 
+        }
+        
+        // 1. On charge les commandes (elles sont maintenant propres)
+        await fetchCommandes(); 
+        
+        // 2. On charge le résumé financier (il utilise le filtre actif)
+        await fetchSummary();
+
+      } catch (e) {
+        console.error("Erreur critique au chargement initial :", e);
+        setError(`Erreur de chargement: Impossible de synchroniser. Le lien Google Sheet est-il correct ? ${e.message}`);
+      }
+      
+      setLoading(false); 
+    };
+  
+    // Pour le chargement initial et les changements de filtre.
+    // On utilise allCommandes.length > 0 pour éviter de relancer l'importation à chaque changement de filtre
+    if (allCommandes.length === 0 || statusFilter !== 'actifs') {
+      loadData();
+    } else {
+      // Si les données sont déjà là, on ne met à jour que le résumé quand le filtre change.
+      fetchSummary();
+    }
+
+  // Dépendances : Gardez-les ainsi
+  }, [token, statusFilter, fetchCommandes, fetchSummary, handleImport, allCommandes.length]);
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
   // --- FIN DU NOUVEAU useEffect ---
 
 
@@ -211,7 +269,11 @@ function CommandesPage({ token, user, onUserUpdate }) {
     return gainBrut - dtf;
   }, [financialSummary.gainPotentiel, manualDTF]);
 
+<<<<<<< HEAD
   // Commandes affichées (filtrage instantané en frontend)
+=======
+  // Commandes affichées (inchangée)
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
   const commandesAffichees = useMemo(() => {
     
     let filtered = [...allCommandes];
@@ -517,7 +579,11 @@ function CommandesPage({ token, user, onUserUpdate }) {
                         </option>
                       )}
                     </select>
+<<<<<<< HEAD
                 </div>
+=======
+                  </div>
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
                 </div>
               );
             })

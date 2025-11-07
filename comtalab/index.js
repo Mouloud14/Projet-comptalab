@@ -201,6 +201,7 @@ function parseArticleCost(articlesJsonText) {
   return totalCost;
 }
 // index.js (REMPLACER CETTE FONCTION EN ENTIER)
+<<<<<<< HEAD
 const SHEET_STATUS_MAP = {
     'enpreparation': 'En préparation',
     'confirme': 'Confirmé',
@@ -210,6 +211,9 @@ const SHEET_STATUS_MAP = {
     'envoye': 'Envoyé',
     'annule': 'Annulé',
 };
+=======
+
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 /**
  * NOUVELLE FONCTION : Parse une chaîne d'article GSheet en JSON.
  * Gère plusieurs articles séparés par '+', ',' ou 'et'.
@@ -1492,6 +1496,7 @@ app.delete('/api/commandes/:id', authenticateToken, async (req, res) => {
     }
 });
 
+<<<<<<< HEAD
 // index.js (REMPLACEZ LA ROUTE PUT /api/commandes/:id EN ENTIER)
 
 // PUT /api/commandes/:id (Mettre à jour une commande individuelle)
@@ -1499,10 +1504,21 @@ app.put('/api/commandes/:id', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const commandeId = req.params.id;
     const { etat } = req.body; 
+=======
+// --- AJOUT DE LA NOUVELLE ROUTE ---
+// PUT /api/commandes/:id (Mettre à jour une commande individuelle, ex: changer l'état)
+// PUT /api/commandes/:id (Mettre à jour une commande individuelle)
+// CETTE ROUTE EST OPTIMALE.
+app.put('/api/commandes/:id', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const commandeId = req.params.id;
+    const { etat } = req.body;
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 
     if (!etat) {
         return res.status(400).json({ error: "Le champ 'etat' est requis." });
     }
+<<<<<<< HEAD
     if (!sheets) {
         return res.status(503).json({ error: "Service Google Sheets non initialisé." });
     }
@@ -1523,10 +1539,25 @@ WHERE id = $2 AND user_id = $3
 RETURNING telephone, nom_prenom, type_livraison`;
         
         const { rowCount, rows } = await db.query(sql, [normalizedEtat, commandeId, userId]);
+=======
+
+    // Assure la cohérence des données, même si le front normalise déjà
+    const normalizedEtat = normalizeStatus(etat); 
+
+    try {
+        const sql = `
+            UPDATE commandes 
+            SET etat = $1 
+            WHERE id = $2 AND user_id = $3 
+            RETURNING id`;
+        
+        const { rowCount } = await db.query(sql, [normalizedEtat, commandeId, userId]);
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 
         if (rowCount === 0) {
             return res.status(404).json({ message: "Commande non trouvée ou non autorisée" });
         }
+<<<<<<< HEAD
         const updatedCommande = rows[0];
 
         // 4. Préparation et mise à jour du Google Sheet
@@ -1574,6 +1605,9 @@ RETURNING telephone, nom_prenom, type_livraison`;
         }
         
         // Le frontend a besoin de la version normalisée pour son affichage
+=======
+
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
         res.json({ id: commandeId, etat: normalizedEtat });
 
     } catch (err) {
@@ -1581,6 +1615,7 @@ RETURNING telephone, nom_prenom, type_livraison`;
         res.status(500).json({ error: err.message });
     }
 });
+// --- FIN DE L'AJOUT ---
 
 // --- ROUTE DASHBOARD (A adapter pour PostgreSQL) ---
 // index.js (AJOUTER/REMPLACER LA ROUTE DU DASHBOARD)
@@ -1734,6 +1769,7 @@ function normalizeStatus(status) {
         .replace(/[\s\t\-]/g, '') // Supprime les espaces et tirets
         .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Supprime les accents
 }
+<<<<<<< HEAD
 
 // index.js (REMPLACEZ LA FONCTION getOriginalRowIndex EN ENTIER)
 
@@ -1819,6 +1855,8 @@ async function getOriginalRowIndex(spreadsheetId, sheets, commande) {
         return null;
     }
 }
+=======
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 
 app.get('/api/financial-summary', authenticateToken, async (req, res) => {
   const userId = req.user.id;
