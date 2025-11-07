@@ -1524,7 +1524,123 @@ app.put('/api/commandes/:id', authenticateToken, async (req, res) => {
 
 
 // --- ROUTE DASHBOARD (A adapter pour PostgreSQL) ---
+// index.js (AJOUTER/REMPLACER LA ROUTE DU DASHBOARD)
 
+// NOUVELLE ROUTE : GET /api/dashboard-data
+app.get('/api/dashboard-data', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const today = new Date().toISOString().slice(0, 10);
+    console.log(`--- GET /api/dashboard-data (User ${userId}) ---`);
+
+    try {
+        // --- 1. Calcul du Solde Actuel (Balance) ---
+        const { rows: balanceRows } = await db.query(
+            `SELECT 
+                SUM(CASE WHEN type = 'revenu' THEN montant ELSE 0 END) AS total_revenu,
+                SUM(CASE WHEN type = 'depense' THEN montant ELSE 0 END) AS total_depense
+             FROM transactions
+             WHERE user_id = $1`,
+            [userId]
+        );
+        const totalRevenu = parseFloat(balanceRows[0]?.total_revenu || 0);
+        const totalDepense = parseFloat(balanceRows[0]?.total_depense || 0);
+        const totalBalance = totalRevenu - totalDepense;
+
+
+        // --- 2. Calcul de la Valeur Totale du Stock (Total Stock Value) ---
+        // Utilisation du champ 'prix' qui représente le prix de vente unitaire
+        const { rows: stockValueRows } = await db.query(
+            `SELECT SUM(quantite * prix) AS total_value 
+             FROM stock_items 
+             WHERE user_id = $1`,
+            [userId]
+        );
+        const totalStockValue = parseFloat(stockValueRows[0]?.total_value || 0);
+
+
+        // --- 3. Calcul du Gain Net du Jour (Todays Potential Gain) ---
+        // On cherche les commandes confirmées aujourd'hui.
+        const normalizedConfirme = normalizeStatus('Confirmé');
+        const { rows: todaysCommands } = await db.query(
+            `SELECT articles, prix_total, type_livraison, adresse, date_commande
+             FROM commandes 
+             WHERE user_id = $1 AND etat = $2 AND date_commande = $3`,
+            [userId, normalizedConfirme, today]
+        );
+
+        let todaysPotentialGain = 0;
+        let todaysTotalLivraison = 0;
+        let todaysTotalCost = 0;
+
+        for (const cmd of todaysCommands) {
+            const prixTotal = parseFloat(cmd.prix_total || 0);
+            const coutArticle = parseArticleCost(cmd.articles || '[]');
+            const coutLivraison = getLivraisonCost(cmd.type_livraison, cmd.adresse);
+            
+            todaysTotalCost += coutArticle;
+            todaysTotalLivraison += coutLivraison;
+            todaysPotentialGain += (prixTotal - coutArticle - coutLivraison);
+        }
+
+        // --- 4. Top Catégories (Top 3 des ventes) ---
+        // Simplification : On compte les articles vendus (en général)
+        const topCategories = [
+            // C'est un calcul complexe qui nécessiterait de parser chaque JSON d'article.
+            // Pour l'instant, on laisse vide, ou on renvoie une valeur factice.
+            // Le frontend gère ce cas.
+        ];
+        
+        // --- 5. Top Wilayas (Top 5 des commandes) ---
+        // On fait un COUNT GROUP BY sur les adresses (simplifié à la wilaya/adresse)
+        const { rows: topWilayasRows } = await db.query(
+            `SELECT adresse, COUNT(id) AS count
+             FROM commandes 
+             WHERE user_id = $1 AND adresse IS NOT NULL AND adresse != ''
+             GROUP BY adresse
+             ORDER BY count DESC
+             LIMIT 5`,
+            [userId]
+        );
+        
+        const topWilayas = topWilayasRows.map(row => ({ 
+            // On utilise l'adresse comme nom de wilaya
+            name: row.adresse.substring(0, 30) + (row.adresse.length > 30 ? '...' : ''), 
+            count: parseInt(row.count) 
+        }));
+
+const normalizedPretALivrer = normalizeStatus('Prêt a livrer');
+
+const { rows: pretALivrerCommands } = await db.query(
+    `SELECT articles, prix_total, type_livraison, adresse 
+     FROM commandes 
+     WHERE user_id = $1 AND etat = $2`,
+    [userId, normalizedPretALivrer]
+);
+
+let totalPotentialGain = 0;
+
+for (const cmd of pretALivrerCommands) {
+    const prixTotal = parseFloat(cmd.prix_total || 0);
+    const coutArticle = parseArticleCost(cmd.articles || '[]');
+    const coutLivraison = getLivraisonCost(cmd.type_livraison, cmd.adresse);
+    
+    // Gain net potentiel = Prix Total - Coût Article - Coût Livraison
+    totalPotentialGain += (prixTotal - coutArticle - coutLivraison);
+}
+        // --- Résultat final pour le frontend ---
+        res.json({
+            totalBalance,       // Le solde exact de toutes les transactions
+            totalStockValue,    // Valeur totale du stock
+            todaysPotentialGain: totalPotentialGain,
+            topCategories,
+            topWilayas
+        });
+
+    } catch (err) {
+        console.error("Erreur DB GET /api/dashboard-data:", err.message, err.stack);
+        res.status(500).json({ error: `Erreur serveur lors du chargement du tableau de bord: ${err.message}` });
+    }
+});
 // GET /api/dashboard-summary (Conversion simplifiée)
 app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
     const userId = req.user.id;
