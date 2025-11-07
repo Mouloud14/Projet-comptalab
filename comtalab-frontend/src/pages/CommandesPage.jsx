@@ -1,5 +1,4 @@
-// src/pages/CommandesPage.jsx (Correction du bouclage infini: Retrait de 'loading' dans fetchCommandes)
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import './CommandesPage.css';
 
 // --- Fonction formatArgent ---
@@ -9,39 +8,37 @@ const formatArgent = (nombre) => {
   }
   return new Intl.NumberFormat('fr-FR').format(nombre.toFixed(0)) + ' DZD';
 };
+
+// --- Fonction pour formater le JSON des articles ---
+const formatArticles = (articlesJson) => {
+  try {
+    const articles = JSON.parse(articlesJson);
+    if (!Array.isArray(articles) || articles.length === 0) return '-';
+
+    return articles.map(art =>
+      // Gère le cas où la quantité n'est pas définie (ex: import GSheet)
+      `${art.quantite || 1} x ${art.nom || 'Article inconnu'}${art.style ? ` (${art.style})` : ''}`
+    ).join(', ');
+
+  } catch (e) {
+    // Fallback si ce n'est pas du JSON (ancien format GSheet)
+    return articlesJson || '-';
+  }
+};
 // --- FIN ---
 
-// Fonction pour convertir les lignes du tableau en objets (inchangée)
-const transformData = (data) => {
-  if (!data || data.length < 2) return [];
-
-  const headers = data[0].map(header =>
-    String(header || '')
-      .trim().toLowerCase().replace(/[\s/()]+/g, '_')
-      .replace(/[éèêë]/g, 'e').replace(/[àâä]/g, 'a').replace(/[îï]/g, 'i')
-      .replace(/[ôö]/g, 'o').replace(/[ûü]/g, 'u').replace(/ç/g, 'c')
-      .replace(/^_+|_+$/g, '').replace(/[^a-z0-9_]/g, '')
-  );
-  const etatKey = 'etat_de_livraison';
-  const etatIndex = headers.findIndex(header => header === etatKey);
-  if (etatIndex === -1) {
-    console.warn(`Colonne clé '${etatKey}' non trouvée. Vérifiez l'en-tête Google Sheet.`);
-  }
-  return data.slice(1).map((row, rowIndex) => {
-    const commande = {};
-    headers.forEach((header, index) => {
-      if (header) {
-        commande[header] = row[index] !== undefined && row[index] !== null ? String(row[index]) : '';
-      }
-    });
-    commande.id = `sheet-${rowIndex}`;
-    commande.originalRowIndex = rowIndex + 2;
-    return commande;
-  });
+// --- Fonction de Normalisation (Globale) ---
+const normalizeStatus = (str) => {
+  if (!str) return '';
+  return str.toLowerCase()
+    .replace(/[\s\t\-]/g, '') // Supprime les espaces et tirets
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Supprime les accents
 };
 
-
 function CommandesPage({ token, user, onUserUpdate }) {
+    // 🚨 CRITIQUE : Référence pour garantir que l'importation initiale ne se fait qu'une seule fois
+    const hasInitialImportRun = useRef(false);
+
   const [allCommandes, setAllCommandes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -55,63 +52,47 @@ function CommandesPage({ token, user, onUserUpdate }) {
   const [isImporting, setIsImporting] = useState(false);
 
   // --- Listes de statuts ---
-  const statutsActifs = ['en préparation', 'confirmé', 'prêt a livrer', 'echange', 'envoyé'];
+  const statutsActifs = ['en préparation', 'confirmé', 'prêt a livrer', 'echange'];
   const allSelectableStatuses = [
     'En préparation', 'Confirmé', 'Non confirmé',
-    'Prêt à Livrer', 'Echange', 'Envoyé', 'Annulé'
+    'Prêt a livrer', 
+    'Echange', 
+    'Envoyé', 
+    'Annulé'
   ];
-  const cleEtat = 'etat_de_livraison';
 
-  // Fonction pour charger les données
+  // --- Fonction pour charger les données (DEPUIS LA DB POSTGRES) ---
   const fetchCommandes = useCallback(async (showAlert = false) => {
-    setError('');
     try {
-      const response = await fetch('http://localhost:3001/api/sheet-data', {
+      const response = await fetch('http://localhost:3001/api/commandes', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
       if (!response.ok) {
         let errData = {};
-        try {
-          errData = await response.json();
-        } catch (e) {
-          throw new Error(`Erreur ${response.status}: Réponse non-JSON du serveur.`); 
-        }
-        
+        try { errData = await response.json(); } catch (e) { /* ignore */ }
         if (response.status === 401 || response.status === 403) throw new Error("Session expirée. Veuillez vous reconnecter.");
-        if (response.status === 404 && errData.error && errData.error.includes('Aucun lien Google Sheet')) throw new Error("Aucun lien Google Sheet n'est configuré pour ce compte.");
-        
         throw new Error(errData.error || `Erreur ${response.status}`);
       }
-      
-      const rawData = await response.json();
-      if (!Array.isArray(rawData) || rawData.length === 0) {
-        setAllCommandes([]);
-      } else {
-        const transformed = transformData(rawData);
-        setAllCommandes(transformed);
-      }
-      if (showAlert) alert('Commandes rechargées !');
+
+      const commandesFromDB = await response.json();
+      setAllCommandes(Array.isArray(commandesFromDB) ? commandesFromDB : []);
+
+      if (showAlert) alert('Commandes rechargées depuis la base de données !');
+
     } catch (err) {
-      console.error("Erreur fetchCommandes:", err);
+      console.error("Erreur fetchCommandes (DB):", err);
       setError(`Impossible de charger les commandes : ${err.message}.`);
       setAllCommandes([]);
     } finally {
-      // C'est OK de mettre loading à false ici. La boucle est dans la dépendance du useCallback.
-      if (loading) setLoading(false);
       setUpdatingStatus(null);
     }
-  }, [token]); // CORRECTION: Retrait de 'loading' de la dépendance ici
+  }, [token]);
 
-  // Premier chargement
-  useEffect(() => {
-    setLoading(true);
-    if (token) { fetchCommandes(); }
-    else { setLoading(false); setError("Non connecté."); setAllCommandes([]); }
-  }, [token, fetchCommandes]);
-
-  // useEffect pour le Gain Potentiel (ajout de useCallback)
+  // --- Fonction pour le résumé financier ---
   const fetchSummary = useCallback(async () => {
     if (!token) return;
+    console.log(` -> Appel fetchSummary avec filtre: ${statusFilter}`); 
     const filterParam = encodeURIComponent(statusFilter);
     try {
       const response = await fetch(`http://localhost:3001/api/financial-summary?filter=${filterParam}`, {
@@ -123,124 +104,14 @@ function CommandesPage({ token, user, onUserUpdate }) {
     } catch (err) {
       console.error("Erreur fetchSummary:", err);
       setFinancialSummary({ gainPotentiel: 0, totalCommandes: 0, totalLivraison: 0, totalCoutArticles: 0 });
+      setError(`Erreur calcul résumé: ${err.message}`); 
     }
-  }, [token, statusFilter]); // Ne dépend QUE de token et statusFilter
+  }, [token, statusFilter]);
 
-  useEffect(() => {
-    if (token) { fetchSummary(); }
-    // Le fetchSummary est maintenant correctement déclenché UNIQUEMENT par la modification du filtre ou du token.
-    // Il n'a plus de lien direct avec la mise à jour des commandes qui cause la boucle.
-  }, [token, statusFilter, fetchSummary]); 
-
-
-  // Calcul du Gain Net Final (inchangée)
-  const gainNetFinal = useMemo(() => {
-    const gainBrut = financialSummary.gainPotentiel || 0;
-    const dtf = parseFloat(manualDTF) || 0;
-    return gainBrut - dtf;
-  }, [financialSummary.gainPotentiel, manualDTF]);
-
-  // Commandes affichées (inchangée)
-  const commandesAffichees = useMemo(() => {
-    const normalizeStatus = (str) => {
-      return (str || '').trim().toLowerCase().replace(/à/g, 'a').replace(/[éèêë]/g, 'e');
-    };
-
-    let filtered = [...allCommandes];
-    const normalizedStatusFilter = normalizeStatus(statusFilter);
-
-    if (normalizedStatusFilter === 'actifs') {
-      const normalizedStatutsActifs = statutsActifs.map(s => normalizeStatus(s));
-      filtered = filtered.filter(cmd => {
-        const etatCmd = normalizeStatus(cmd[cleEtat]);
-        return etatCmd && normalizedStatutsActifs.includes(etatCmd);
-      });
-    } else if (normalizedStatusFilter !== 'tous') {
-      filtered = filtered.filter(cmd => {
-        const etatCmd = normalizeStatus(cmd[cleEtat]);
-        return etatCmd === normalizedStatusFilter;
-      });
-    }
-
-    const lowerSearch = searchTerm.trim().toLowerCase();
-    if (lowerSearch === '') return filtered;
-
-    return filtered.filter(commande => {
-      return Object.values(commande).some(valeur =>
-        String(valeur).toLowerCase().includes(lowerSearch)
-      );
-    });
-  }, [allCommandes, statusFilter, searchTerm, cleEtat, statutsActifs]);
-
-
-  // handleStatusChange (inchangée)
-  const handleStatusChange = async (commandeId, originalRowIndex, newStatus) => {
-    setUpdatingStatus(commandeId);
-    setError('');
-    try {
-      const response = await fetch('http://localhost:3001/api/sheet-data/update-status', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ rowIndex: originalRowIndex, newStatus: newStatus })
-      });
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || `Erreur ${response.status}`);
-      }
-      // Relance le chargement des commandes ET le résumé financier (via fetchCommandes -> fetchSummary)
-      setTimeout(() => { 
-        fetchCommandes(); 
-        fetchSummary(); // Relance explicite
-      }, 500);
-    } catch (err) {
-      console.error("Erreur handleStatusChange:", err);
-      setError(`Erreur mise à jour statut: ${err.message}`);
-      setUpdatingStatus(null);
-    }
-  };
-
-  // handleSaveSheetUrl: CORRECTION DE L'URL POUR UTILISER UNE ROUTE DÉDIÉE
-  const handleSaveSheetUrl = async (e) => {
-    e.preventDefault();
-    setUrlSaveMessage('');
-    try {
-      // Utilisation de la route PUT /api/user/sheet-link (qui doit exister dans index.js)
-      const response = await fetch('http://localhost:3001/api/user/sheet-link', {
-        method: 'PUT', 
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ googleSheetUrl: sheetUrl }) 
-      });
-      
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Erreur inconnue');
-      }
-      
-      // Succès
-      setUrlSaveMessage('Lien enregistré ! Rechargement des commandes...');
-      if (typeof onUserUpdate === 'function') {
-        const updatedUser = data.user || { ...user, google_sheet_url: sheetUrl };
-        onUserUpdate(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-      }
-      
-      // Rafraîchissement
-      setTimeout(() => {
-        setLoading(true);
-        fetchCommandes();
-        setUrlSaveMessage('');
-      }, 1500);
-    } catch (err) {
-      console.error("Erreur handleSaveSheetUrl:", err);
-      setUrlSaveMessage(`Erreur lors de l'enregistrement: ${err.message}`);
-    }
-  };
-
-  // --- Fonction d'Importation (inchangée) ---
-  const handleImport = async () => {
-    if (!window.confirm("Importer toutes les commandes du Sheet ?\n\nCela effacera et remplacera les commandes actuelles dans la base de données. Vos calculs de gain seront mis à jour.")) {
-      return;
+  // --- Fonction d'Importation (Bouton "Synchroniser") ---
+  const handleImport = useCallback(async (showAlert = true) => {
+    if (showAlert && !window.confirm("Importer toutes les commandes du Sheet ?\n\nCela effacera et remplacera les commandes actuelles dans la base de données.")) {
+      return false; 
     }
 
     setIsImporting(true);
@@ -255,26 +126,212 @@ function CommandesPage({ token, user, onUserUpdate }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erreur inconnue lors de l\'importation');
+        throw new Error(data.error || "Erreur inconnue lors de l'importation");
       }
 
-      alert(data.message);
-      fetchCommandes();
+      if (showAlert) alert(data.message);
+      
+      // Rafraîchissement complet
+      await fetchCommandes();
+      await fetchSummary();
+
+      return true; 
 
     } catch (err) {
       console.error("Erreur handleImport:", err);
-      setError(`Erreur d'importation: ${err.message}`);
+      if (err.message && !err.message.includes("Aucun lien Google Sheet")) {
+        setError(`Erreur d'importation: ${err.message}`);
+      }
+      return false; 
     } finally {
       setIsImporting(false);
     }
+  }, [token, fetchCommandes, fetchSummary]);
+
+
+  // --- useEffect UNIFIÉ (Chargement Initial + Filtres) ---
+  useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      setError("Non connecté.");
+      setAllCommandes([]);
+      return;
+    }
+
+    // --- Logique de Chargement Initial (Exécuté une seule fois par session) ---
+    if (!hasInitialImportRun.current) {
+      const initialLoad = async () => {
+        setLoading(true);
+        setError('');
+
+        // 🚨 CORRECTION CRITIQUE : Délai pour éviter la duplication au démarrage rapide
+        // On utilise setTimeout pour s'assurer que l'opération critique est lancée après que 
+        // React ait rendu la page et que la connexion DB soit stable.
+        setTimeout(async () => {
+          try {
+            console.log("Début de la synchronisation silencieuse initiale (via useRef, avec délai de 200ms)...");
+            hasInitialImportRun.current = true;
+            
+            // 1. Tente l'importation silencieuse (DELETE + INSERT)
+            await handleImport(false); 
+            
+            // 2. Charge les commandes (la liste complète)
+            await fetchCommandes(); 
+            
+            // 3. Charge le résumé initial
+            await fetchSummary();
+            
+          } catch (e) {
+            console.error("Erreur critique au chargement initial :", e);
+          } finally {
+            setLoading(false);
+          }
+        }, 200); // Délai de 200 millisecondes
+      };
+      initialLoad();
+    
+    } else {
+      // --- Logique de Changement de Filtre (Normal) ---
+      if (allCommandes.length > 0) {
+        console.log(`Filtre changé à ${statusFilter}. Mise à jour du résumé.`);
+        fetchSummary();
+      }
+    }
+
+
+  // Dépendances : Gardez-les ainsi
+  }, [token, statusFilter, fetchCommandes, fetchSummary, handleImport]);
+  // --- FIN DU NOUVEAU useEffect ---
+
+
+  // Calcul du Gain Net Final (inchangée)
+  const gainNetFinal = useMemo(() => {
+    const gainBrut = financialSummary.gainPotentiel || 0;
+    const dtf = parseFloat(manualDTF) || 0;
+    return gainBrut - dtf;
+  }, [financialSummary.gainPotentiel, manualDTF]);
+
+  // Commandes affichées (filtrage instantané en frontend)
+  const commandesAffichees = useMemo(() => {
+    
+    let filtered = [...allCommandes];
+    const normalizedStatusFilter = normalizeStatus(statusFilter); 
+
+    if (normalizedStatusFilter === 'actifs') {
+      const normalizedStatutsActifs = statutsActifs.map(s => normalizeStatus(s)); 
+      filtered = filtered.filter(cmd => {
+        const etatCmd = normalizeStatus(cmd.etat); 
+        return etatCmd && normalizedStatutsActifs.includes(etatCmd);
+      });
+    } else if (normalizedStatusFilter === 'tous') {
+      filtered = filtered.filter(cmd => {
+        const etatCmd = normalizeStatus(cmd.etat);
+        return etatCmd !== 'annule';
+      });
+    } else {
+      // CAS 3: Un filtre spécifique
+      filtered = filtered.filter(cmd => {
+        const etatCmd = normalizeStatus(cmd.etat); 
+        return etatCmd === normalizedStatusFilter;
+      });
+    }
+
+    const lowerSearch = searchTerm.trim().toLowerCase();
+    if (lowerSearch === '') return filtered;
+
+    return filtered.filter(commande => {
+      return Object.values(commande).some(valeur =>
+        String(valeur).toLowerCase().includes(lowerSearch)
+      );
+    });
+  }, [allCommandes, statusFilter, searchTerm, statutsActifs]);
+
+  // --- Mise à jour du statut (VERS LA DB POSTGRES) ---
+  const handleStatusChange = async (commandeId, newStatus) => {
+    setUpdatingStatus(commandeId);
+    setError('');
+    try {
+      const response = await fetch(`http://localhost:3001/api/commandes/${commandeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ etat: newStatus }) 
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `Erreur ${response.status}`);
+      }
+
+      // Rafraîchissement léger et rapide
+      // 1. Mettre à jour l'état local
+      setAllCommandes(prevCommandes => 
+        prevCommandes.map(cmd => 
+          cmd.id === commandeId ? { ...cmd, etat: newStatus } : cmd
+        )
+      );
+      
+      // 2. Relancer le calcul du résumé
+      await fetchSummary(); 
+      
+      setUpdatingStatus(null);
+
+    } catch (err) {
+      console.error("Erreur handleStatusChange (DB):", err);
+      setError(`Erreur mise à jour statut: ${err.message}`);
+      setUpdatingStatus(null);
+      // En cas d'erreur, re-fetch tout pour être sûr
+      fetchCommandes();
+    }
   };
+
+  // handleSaveSheetUrl: (Inchangé)
+  const handleSaveSheetUrl = async (e) => {
+    e.preventDefault();
+    setUrlSaveMessage('');
+    try {
+      const response = await fetch('http://localhost:3001/api/user/sheet-link', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ googleSheetUrl: sheetUrl })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Erreur inconnue');
+      }
+
+      // Succès
+      setUrlSaveMessage('Lien enregistré ! Rechargement des commandes...');
+      if (typeof onUserUpdate === 'function') {
+        const updatedUser = data.user || { ...user, google_sheet_url: sheetUrl };
+        onUserUpdate(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+
+      // Rafraîchissement
+      setTimeout(async () => { 
+        setLoading(true);
+        // On relance la synchro complète après avoir ajouté le lien
+        await handleImport(false); 
+        // (handleImport s'occupe déjà de fetchCommandes et fetchSummary)
+        setUrlSaveMessage('');
+        setLoading(false);
+      }, 1500);
+    } catch (err) {
+      console.error("Erreur handleSaveSheetUrl:", err);
+      setUrlSaveMessage(`Erreur lors de l'enregistrement: ${err.message}`);
+    }
+  };
+
+
 
 
   // --- AFFICHAGE ---
   return (
     <div className="commandes-page-content">
       <h1>
-        Commandes Actives (depuis Google Sheets)
+        Commandes Actives (Base de Données)
         {!loading && !error && (
           <span className="commande-count">
             ({commandesAffichees.length})
@@ -283,12 +340,13 @@ function CommandesPage({ token, user, onUserUpdate }) {
       </h1>
 
       {/* --- Bloc de Gain Détaillé --- */}
-      {!loading && !error && (
+      {/* On le cache s'il charge OU s'il importe */}
+      {(!loading && !isImporting) && ( 
         <div className="financial-summary-container">
 
           {/* Ligne 1 : Total Ventes */}
           <div className="summary-line ventes">
-            <span>Total Ventes ({statusFilter === 'actifs' ? 'Actifs' : statusFilter}) :</span>
+            <span>Total Ventes ({statusFilter}) :</span>
             <span className="value-positive">
               {formatArgent(financialSummary.totalCommandes)}
             </span>
@@ -349,13 +407,13 @@ function CommandesPage({ token, user, onUserUpdate }) {
           className="commandes-search-input"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          disabled={loading}
+          disabled={loading || isImporting}
         />
         <select
           className="commandes-status-filter"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          disabled={loading}
+          disabled={loading || isImporting}
         >
           <option value="actifs">Commandes Actives (Défaut)</option>
           <option value="tous">Toutes (Sauf Annulées)</option>
@@ -367,27 +425,25 @@ function CommandesPage({ token, user, onUserUpdate }) {
           ))}
         </select>
 
-        
 
-        {/* Le bouton d'import est de retour, mais on va le cacher avec le CSS que tu as */}
+
         <button
-          onClick={handleImport}
+          onClick={() => handleImport(true)} // On passe 'true' pour l'alerte
           className="btn-import-commandes"
-          disabled={isImporting}
+          disabled={isImporting || loading}
         >
           {isImporting ? 'Importation...' : 'Synchroniser les Commandes'}
         </button>
 
       </div>
 
-      {loading && <p className="loading-message">Chargement...</p>}
+      {(loading || isImporting) && <p className="loading-message">{isImporting ? 'Importation en cours...' : 'Chargement...'}</p>}
 
       {/* --- LE FORMULAIRE D'URL EST ICI --- */}
       {error && (
         <div className="error-box" style={{ padding: '20px', background: '#fff', borderRadius: '8px', margin: '20px 0' }}>
           <p className="error-message" style={{ color: '#d93025' }}>{error}</p>
 
-          {/* Il s'affiche si l'erreur contient "Aucun lien Google Sheet" */}
           {error.includes("Aucun lien Google Sheet") && (
             <form onSubmit={handleSaveSheetUrl} className="sheet-url-form">
               <h4 style={{ marginTop: '0' }}>Configurer votre lien Google Sheet</h4>
@@ -396,7 +452,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
                 type="url"
                 placeholder="https://docs.google.com/spreadsheets/d/..."
                 value={sheetUrl}
-                onChange={(e) => setSheetUrl(e.target.value)}
+                onChange={e => setSheetUrl(e.target.value)}
                 style={{ width: '90%', marginBottom: '10px', padding: '8px' }}
               />
               <button type="submit" style={{ padding: '8px 12px' }}>Enregistrer et Charger</button>
@@ -407,25 +463,25 @@ function CommandesPage({ token, user, onUserUpdate }) {
       )}
       {/* --- FIN DU BLOC D'ERREUR --- */}
 
-      {!loading && !error && (
+      {!loading && !isImporting && !error && (
         <div className="commandes-list-container">
           {commandesAffichees.length > 0 ? (
             commandesAffichees.map((commande) => {
 
-              const currentStatusClass = (commande[cleEtat] || 'inconnu').trim().toLowerCase().replace(/[éèêë]/g, 'e').replace(/[àâä]/g, 'a').replace(/\s+/g, '-');
-              const currentStatusOriginal = commande[cleEtat];
-              const cleDateLivraison = 'date_a_livre_si_cest_reporte';
+              const currentStatusClass = (commande.etat || 'inconnu').trim().toLowerCase().replace(/[éèêë]/g, 'e').replace(/[àâä]/g, 'a').replace(/\s+/g, '-');
+              const currentStatusOriginal = commande.etat;
+              const cleDateLivraison = 'date_livraison';
 
               return (
                 <div key={commande.id} className={`commande-card status-${currentStatusClass} ${updatingStatus === commande.id ? 'updating' : ''}`}>
                   <div className="card-header">
                     <h3>{commande.nom_prenom || 'Client non spécifié'}</h3>
-                    <p>{commande.numero_de_telephone || '-'}</p>
+                    <p>{commande.telephone || '-'}</p>
                   </div>
                   <div className="card-body">
-                    <p><strong>Adresse :</strong> {commande['wilaya_commune_et_adresse_nom_du_bureau'] || 'Non spécifiée'}</p>
-                    <p><strong>Livraison :</strong> {commande.type_de_livraison || '-'}</p>
-                    <p><strong>Articles :</strong> <strong>{commande.articles || '-'}</strong></p>
+                    <p><strong>Adresse :</strong> {commande.adresse || 'Non spécifiée'}</p>
+                    <p><strong>Livraison :</strong> {commande.type_livraison || '-'}</p>
+                    <p><strong>Articles :</strong> <strong>{formatArticles(commande.articles)}</strong></p>
                     <p><strong>Total :</strong> {commande.prix_total || '0'} DZD</p>
 
                     {commande.commentaire && (
@@ -438,27 +494,30 @@ function CommandesPage({ token, user, onUserUpdate }) {
                   </div>
                   <div className="card-footer">
                     <small>Commandé le : {commande.date_commande || '--/--/----'}</small>
-
+                  
                     <select
-                      value={currentStatusOriginal}
-                      onChange={(e) => handleStatusChange(commande.id, commande.originalRowIndex, e.target.value)}
+                      value={currentStatusOriginal} 
+                      onChange={(e) => handleStatusChange(commande.id, e.target.value)}
                       className={`status-select ${currentStatusClass}`}
                       disabled={updatingStatus === commande.id}
                     >
-                      {!allSelectableStatuses.includes(currentStatusOriginal) && (
+                      {allSelectableStatuses.map(niceStatus => {
+                        const uglyStatusValue = normalizeStatus(niceStatus);
+                        
+                        return (
+                          <option key={uglyStatusValue} value={uglyStatusValue}>
+                            {niceStatus}
+                          </option>
+                        );
+                      })}
+
+                      {!allSelectableStatuses.map(s => normalizeStatus(s)).includes(currentStatusOriginal) && (
                         <option key={currentStatusOriginal} value={currentStatusOriginal}>
                           {currentStatusOriginal}
                         </option>
                       )}
-
-                      {allSelectableStatuses.map(status => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
                     </select>
-
-                  </div>
+                </div>
                 </div>
               );
             })

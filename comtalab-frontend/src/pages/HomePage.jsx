@@ -1,36 +1,41 @@
-// src/pages/HomePage.jsx (Corrigé - Affiche Top 3 et Top 5 Wilayas)
-import React, { useState, useEffect, useMemo } from 'react'; 
+// src/pages/HomePage.jsx (Final - Utilise le solde précis de l'API)
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import './HomePage.css'; 
+import './HomePage.css';
 
 const formatArgent = (nombre) => {
-  if (nombre == null || isNaN(nombre)) {
-    return '...';
-  }
-  return new Intl.NumberFormat('fr-FR').format(nombre.toFixed(0));
+  if (nombre == null || isNaN(nombre)) {
+    return '...';
+  }
+  return new Intl.NumberFormat('fr-FR').format(nombre.toFixed(0));
 };
 
 function HomePage({ username, currentBalance, token, transactionsDuJour }) {
-  
-  const [dashboardData, setDashboardData] = useState(null); 
-  // (On n'a plus besoin de lowStockData ici)
+
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  // État local pour le solde total précis (mis à jour par l'API)
+  const [totalBalance, setTotalBalance] = useState(currentBalance || 0);
 
   useEffect(() => {
     const fetchAllDashboardData = async () => {
-      if (!token) return; 
-      
+      if (!token) return;
+
       setLoading(true);
       try {
-        // On n'appelle plus /api/stock-low
-        const response = await fetch('http://localhost:3001/api', {
-            headers: { 'Authorization': `Bearer ${token}` }
+
+        // Appel de la nouvelle route d'API du dashboard
+        const response = await fetch('http://localhost:3001/api/dashboard-data', {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (!response.ok) throw new Error('Erreur chargement dashboard');
 
         const dashData = await response.json();
         setDashboardData(dashData);
+
+        // Mise à jour du solde depuis la DB (le plus précis)
+        setTotalBalance(dashData.totalBalance);
 
       } catch (err) {
         console.error("Erreur fetchAllDashboardData:", err);
@@ -41,14 +46,16 @@ function HomePage({ username, currentBalance, token, transactionsDuJour }) {
     };
 
     fetchAllDashboardData();
-  }, [token, currentBalance]); // Se rafraîchit si le solde change
+  }, [token, currentBalance]);
 
-  const stockValue = dashboardData?.totalStockValue || 0;
-  const companyValue = (currentBalance || 0) + stockValue;
-  const todaysGain = dashboardData?.todaysPotentialGain || 0;
-  const topCategories = dashboardData?.topCategories || [];
-  const topWilayas = dashboardData?.topWilayas || []; // <-- NOUVEAU
-  const transactions = transactionsDuJour.slice(0, 5) || []; 
+
+  const stockValue = dashboardData?.totalStockValue || 0;
+  // Calcule la valeur de l'entreprise avec le solde précis récupéré
+  const companyValue = totalBalance + stockValue;
+  const todaysGain = dashboardData?.todaysPotentialGain || 0;
+  const topCategories = dashboardData?.topCategories || [];
+  const topWilayas = dashboardData?.topWilayas || [];
+  const transactions = transactionsDuJour.slice(0, 5) || [];
 
   if (loading) {
     return (
@@ -59,42 +66,42 @@ function HomePage({ username, currentBalance, token, transactionsDuJour }) {
     );
   }
 
-  return (
-  	 <div className="home-page-content">
-  	 	 <h1>Bienvenue, {username || 'Utilisateur'} !</h1>
-  	 	 <p>Tableau de bord principal.</p>
+  return (
+    <div className="home-page-content">
+      <h1>Bienvenue, {username || 'Utilisateur'} !</h1>
+      <p>Tableau de bord principal.</p>
 
-      {/* 1. Cartes de Chiffres (inchangées) */}
-  	 	 <div className="home-stats-grid">
-  	 	 	 <div className="stat-card">
-  	 	 	 	 <span className={`balance-value ${companyValue >= 0 ? 'positive' : 'negative'}`}>
-  	 	 	 	 	 {formatArgent(companyValue)} DZD
-  	 	 	 	 </span>
-  	 	 	 	 <h2>Valeur de l'Entreprise</h2>
-  	 	 	 	 <p>Solde Actuel + Valeur du Stock ({formatArgent(stockValue)})</p>
-  	 	 	 	 <Link to="/stock" className="link-transactions">Gérer le stock</Link>
-  	 	 	 </div>
-  	 	 	 <div className="stat-card primary-stat"> 
-  	 	 	 	 <span className={`balance-value ${currentBalance >= 0 ? 'positive' : 'negative'}`}>
-  	 	 	 	 	 {formatArgent(currentBalance)} DZD
-  	 	 	 	 </span>
-  	 	 	 	 <h2>Solde Actuel (Transactions)</h2>
-  	 	 	 	 <p>Votre argent liquide disponible.</p>
-  	 	 	 	 <Link to="/transactions" className="link-transactions">Gérer les transactions</Link>
-  	 	 	 </div>
-  	 	 	 <div className="stat-card">
-  	 	 	 	 <span className={`balance-value ${todaysGain >= 0 ? 'positive' : 'negative'}`}>
-  	 	 	 	 	 {formatArgent(todaysGain)} DZD
-  	 	 	 	 </span>
-  	 	 	 	 <h2>Gain Net du Jour</h2>
-  	 	 	 	 <p>Gain net des commandes confirmées aujourd'hui.</p>
-  	 	 	 	 <Link to="/commandes" className="link-transactions">Voir les commandes</Link>
-  	 	 	 </div>
-  	 	 </div>
+      {/* 1. Cartes de Chiffres */}
+      <div className="home-stats-grid">
+        <div className="stat-card">
+          <span className={`balance-value ${companyValue >= 0 ? 'positive' : 'negative'}`}>
+            {formatArgent(companyValue)} DZD
+          </span>
+          <h2>Valeur de l'Entreprise</h2>
+          <p>Solde Actuel + Valeur du Stock ({formatArgent(stockValue)})</p>
+          <Link to="/stock" className="link-transactions">Gérer le stock</Link>
+        </div>
+        <div className="stat-card primary-stat">
+          <span className={`balance-value ${totalBalance >= 0 ? 'positive' : 'negative'}`}>
+            {formatArgent(totalBalance)} DZD
+          </span>
+          <h2>Solde Actuel (Transactions)</h2>
+          <p>Votre argent liquide disponible.</p>
+          <Link to="/transactions" className="link-transactions">Gérer les transactions</Link>
+        </div>
+        <div className="stat-card">
+          <span className={`balance-value ${todaysGain >= 0 ? 'positive' : 'negative'}`}>
+            {formatArgent(todaysGain)} DZD
+          </span>
+          <h2>Gain Net du Jour</h2>
+          <p>Gain net des commandes confirmées aujourd'hui.</p>
+          <Link to="/commandes" className="link-transactions">Voir les commandes</Link>
+        </div>
+      </div>
 
-      {/* 2. Aperçu en Direct (MODIFIÉ) */}
+      {/* 2. Aperçu en Direct */}
       <div className="live-preview-grid">
-        
+
         {/* Top 3 Ventes */}
         <div className="preview-card">
           <h2>Top 3 des Ventes (Catégories)</h2>
@@ -150,8 +157,8 @@ function HomePage({ username, currentBalance, token, transactionsDuJour }) {
 
       </div>
 
-  	 </div>
-  );
+    </div>
+  );
 }
 
 export default HomePage;

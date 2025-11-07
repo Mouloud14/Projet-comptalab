@@ -12,36 +12,51 @@
   --shadow-medium: 0 4px 10px rgba(0, 0, 0, 0.08);
 
   /* --- Couleurs de Statut (MISES À JOUR) --- */
-  --status-confirme-bg: #E1BEE7; /* Violet clair */
+  --status-confirme-bg: #E1BEE7;
+  /* Violet clair */
   --status-confirme-border: #CE93D8;
-  --status-confirme-select: #BA68C8; /* Violet (pour 'confirmé') */
+  --status-confirme-select: #BA68C8;
+  /* Violet (pour 'confirmé') */
 
-  --status-en-preparation-bg: #C8E6C9; /* Vert clair */
+  --status-en-preparation-bg: #C8E6C9;
+  /* Vert clair */
   --status-en-preparation-border: #A5D6A7;
-  --status-en-preparation-select: #66BB6A; /* Vert */
+  --status-en-preparation-select: #66BB6A;
+  /* Vert */
 
-  --status-non-confirme-bg: #BBDEFB; /* Bleu clair */
+  --status-non-confirme-bg: #BBDEFB;
+  /* Bleu clair */
   --status-non-confirme-border: #90CAF9;
-  --status-non-confirme-select: #42A5F5; /* Bleu */
+  --status-non-confirme-select: #42A5F5;
+  /* Bleu */
 
-  --status-annule-bg: #FFCDD2; /* Rouge clair */
+  --status-annule-bg: #FFCDD2;
+  /* Rouge clair */
   --status-annule-border: #EF9A9A;
-  --status-annule-select: #E57373; /* Rouge */
+  --status-annule-select: #E57373;
+  /* Rouge */
 
-  --status-pret-a-livrer-bg: #FFF9C4; /* Jaune clair */
+  --status-pret-a-livrer-bg: #FFF9C4;
+  /* Jaune clair */
   --status-pret-a-livrer-border: #FFF59D;
-  --status-pret-a-livrer-select: #FBC02D; /* Jaune/Orangé */
+  --status-pret-a-livrer-select: #FBC02D;
+  /* Jaune/Orangé */
 
   /* MODIFIÉ : Echange (maintenant Violet) */
-  --status-echange-bg: #E1BEE7; /* Violet clair (comme 'confirmé') */
+  --status-echange-bg: #E1BEE7;
+  /* Violet clair (comme 'confirmé') */
   --status-echange-border: #CE93D8;
-  --status-echange-select: #BA68C8; /* Violet (comme 'confirmé') */
+  --status-echange-select: #BA68C8;
+  /* Violet (comme 'confirmé') */
 
   /* MODIFIÉ : Envoyé (maintenant Vert Foncé) */
-  --status-envoye-bg: #A5D6A7; /* Fond vert (comme 'en prépa') */
+  --status-envoye-bg: #A5D6A7;
+  /* Fond vert (comme 'en prépa') */
   --status-envoye-border: #81C784;
-  --status-envoye-select: #388E3C; /* Selecteur vert foncé */
+  --status-envoye-select: #388E3C;
+  /* Selecteur vert foncé */
 }
+
 /* --- FIN DES MODIFICATIONS --- */
 
 body {
@@ -88,27 +103,36 @@ body {
   gap: 8px 20px;
   align-items: center;
 }
+
 .financial-summary-container .summary-line {
   grid-column: 1 / -1;
   display: contents;
 }
-.financial-summary-container .summary-line > span:first-child {
+
+.financial-summary-container .summary-line>span:first-child {
   text-align: left;
 }
-.financial-summary-container .summary-line > span:last-child {
+
+.financial-summary-container .summary-line>span:last-child {
   text-align: right;
   font-weight: 600;
 }
+
 .financial-summary-container .summary-line.ventes {
   font-weight: 600;
   font-size: 1.1rem;
 }
+
 .financial-summary-container .value-positive {
-  color: var(--status-en-preparation-select); /* Vert */
+  color: var(--status-en-preparation-select);
+  /* Vert */
 }
+
 .financial-summary-container .value-negative {
-  color: var(--status-annule-select); /* Rouge */
+  color: var(--status-annule-select);
+  /* Rouge */
 }
+
 .financial-summary-container .summary-line.brut {
   font-size: 1.1rem;
   font-weight: bold;
@@ -116,19 +140,23 @@ body {
   margin-top: 5px;
   padding-top: 10px;
 }
+
 .financial-summary-container .summary-line.brut span:last-child {
   font-size: 1.2rem;
 }
+
 .financial-summary-container .summary-line.dtf-line {
   border-top: 1px solid #eee;
   margin-top: 5px;
   padding-top: 10px;
 }
+
 .financial-summary-container .summary-line.dtf-line label {
   font-weight: 600;
   color: var(--light-text-color);
   font-size: 0.9rem;
 }
+
 .financial-summary-container .summary-line.dtf-line input[type="number"] {
   width: 100px;
   padding: 5px 8px;
@@ -138,6 +166,7 @@ body {
   font-size: 0.9rem;
   justify-self: end;
 }
+
 .financial-summary-container .summary-line.total {
   font-size: 1.3rem;
   font-weight: bold;
@@ -145,9 +174,11 @@ body {
   margin-top: 10px;
   padding-top: 10px;
 }
+
 .financial-summary-container .summary-line.total span:last-child {
   color: var(--primary-color);
 }
+
 /* --- FIN SECTION GAIN --- */
 
 /* Barre de filtres (inchangée) */
@@ -163,12 +194,15 @@ body {
   box-shadow: var(--shadow-light);
   border: none;
 }
+
 .commandes-search-input {
   flex: 1 1 300px;
 }
+
 .commandes-status-filter {
   flex: 1 1 200px;
 }
+
 .commandes-search-input,
 .commandes-status-filter,
 .btn-refresh-commandes,
@@ -182,35 +216,42 @@ body {
   background-color: #fff;
   cursor: pointer;
 }
+
 .btn-refresh-commandes:hover,
 .btn-import-commandes:hover {
   background-color: #f5f5f5;
   border-color: #bbb;
 }
+
 .btn-import-commandes {
   background-color: #00bfa5 !important;
   color: white !important;
   font-weight: 600 !important;
   border-color: #00bfa5 !important;
 }
+
 .btn-import-commandes:hover {
   background-color: #008c7a !important;
   border-color: #008c7a !important;
 }
+
 .btn-import-commandes:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
 .commandes-search-input:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
   outline: none;
 }
+
 .commandes-status-filter:focus {
   border-color: #ccc;
   box-shadow: none;
   outline: none;
 }
+
 .commandes-status-filter {
   font-weight: 500;
   color: var(--text-color);
@@ -232,6 +273,7 @@ body {
   box-shadow: var(--shadow-light);
   margin-top: 20px;
 }
+
 .error-box {
   padding: 25px;
   background: #fff0f0;
@@ -240,6 +282,7 @@ body {
   border: 1px solid #ffcccc;
   box-shadow: var(--shadow-light);
 }
+
 .error-message {
   color: #d32f2f;
   background-color: transparent;
@@ -248,21 +291,25 @@ body {
   font-size: 1.1rem;
   margin-bottom: 20px;
 }
+
 .sheet-url-form {
   margin-top: 20px;
   padding-top: 20px;
   border-top: 1px solid #eee;
   text-align: center;
 }
+
 .sheet-url-form h4 {
   color: var(--text-color);
   font-size: 1.1rem;
   margin-bottom: 10px;
 }
+
 .sheet-url-form p {
   color: var(--light-text-color);
   margin-bottom: 15px;
 }
+
 .sheet-url-form input[type="url"] {
   width: calc(100% - 30px);
   max-width: 500px;
@@ -273,11 +320,13 @@ body {
   font-size: 1rem;
   transition: all 0.2s ease-in-out;
 }
+
 .sheet-url-form input[type="url"]:focus {
   border-color: var(--secondary-color);
   box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
   outline: none;
 }
+
 .sheet-url-form button[type="submit"] {
   background-color: var(--secondary-color);
   color: white;
@@ -289,10 +338,12 @@ body {
   font-weight: 600;
   transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
+
 .sheet-url-form button[type="submit"]:hover {
   background-color: #1976D2;
   box-shadow: var(--shadow-light);
 }
+
 .sheet-url-form .urlSaveMessage {
   margin-top: 15px;
   font-size: 0.95rem;
@@ -305,6 +356,7 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 20px;
 }
+
 .commande-card {
   background-color: #ffffff;
   border: none;
@@ -315,9 +367,11 @@ body {
   transition: box-shadow 0.2s ease-out;
   overflow: hidden;
 }
+
 .commande-card:hover {
   box-shadow: var(--shadow-medium);
 }
+
 .commande-card.updating {
   opacity: 0.7;
   pointer-events: none;
@@ -335,24 +389,31 @@ body {
   border-top-right-radius: 10px;
   transition: background-color 0.3s ease;
 }
+
 .commande-card.status-confirme .card-header {
   background-color: var(--status-confirme-bg);
 }
+
 .commande-card.status-en-preparation .card-header {
   background-color: var(--status-en-preparation-bg);
 }
+
 .commande-card.status-non-confirme .card-header {
   background-color: var(--status-non-confirme-bg);
 }
+
 .commande-card.status-annule .card-header {
   background-color: var(--status-annule-bg);
 }
+
 .commande-card.status-pret-a-livrer .card-header {
   background-color: var(--status-pret-a-livrer-bg);
 }
+
 .commande-card.status-echange .card-header {
   background-color: var(--status-echange-bg);
 }
+
 .commande-card.status-envoye .card-header {
   background-color: var(--status-envoye-bg);
 }
@@ -363,16 +424,19 @@ body {
   color: var(--text-color);
   font-weight: 600;
 }
+
 .card-header p {
   margin: 0 0 0 12px;
   font-size: 0.9rem;
   color: var(--light-text-color);
   font-weight: 500;
 }
+
 .card-body {
   padding: 18px;
   flex-grow: 1;
 }
+
 .card-body p {
   margin: 0 0 10px 0;
   font-size: 0.95rem;
@@ -380,21 +444,26 @@ body {
   color: #444;
   word-break: break-word;
 }
+
 .card-body p strong {
   color: var(--text-color);
   font-weight: 600;
 }
+
 .card-body p:last-child {
   margin-bottom: 0;
 }
+
 .card-body p small {
   font-size: 0.85rem;
   color: #777;
 }
+
 .card-body p small strong {
   color: #555;
   font-weight: 600;
 }
+
 .card-footer {
   padding: 12px 18px;
   border-top: none;
@@ -405,6 +474,7 @@ body {
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
 }
+
 .card-footer small {
   font-size: 0.8rem;
   color: #888;
@@ -431,68 +501,129 @@ body {
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 }
+
 .status-select:hover {
   background-color: #f9f9f9;
   border-color: #a0a0a0;
 }
+
 .status-select:disabled {
   cursor: not-allowed;
   opacity: 0.6;
   background-color: #eee;
 }
-
-/* Couleurs de TEXTE (et bordure) pour le select (MODIFIÉES) */
-.status-select.status-confirme {
-  color: var(--status-confirme-select);
-  border-color: var(--status-confirme-bg);
-}
-.status-select.status-en-preparation {
-  color: var(--status-en-preparation-select);
-  border-color: var(--status-en-preparation-bg);
-}
-.status-select.status-non-confirme {
-  color: var(--status-non-confirme-select);
-  border-color: var(--status-non-confirme-bg);
-}
-.status-select.status-annule {
-  color: var(--status-annule-select);
-  border-color: var(--status-annule-bg);
-}
-.status-select.status-pret-a-livrer {
-  color: var(--status-pret-a-livrer-select);
-  border-color: var(--status-pret-a-livrer-bg);
-}
-.status-select.status-echange {
-  color: var(--status-echange-select);
-  border-color: var(--status-echange-border);
-}
-.status-select.status-envoye {
-  color: var(--status-envoye-select); /* <-- Corrigé */
-  border-color: var(--status-envoye-border); /* <-- Corrigé */
+.commande-card {
+  border: 1px solid var(--border-color); /* Utilisation d'une variable pour la cohérence */
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #ffffff; /* S'assurer que le fond de la carte est blanc */
+  box-shadow: var(--shadow-light); /* Ajout d'une légère ombre pour la profondeur */
+  transition: all 0.2s ease-in-out;
 }
 
+.commande-card:hover {
+  box-shadow: var(--shadow-medium); /* Ombre plus prononcée au survol */
+}
+
+/* Base de l'en-tête - Peut rester générique, les couleurs spécifiques surchargent */
+.commande-card .card-header {
+  padding: 12px 18px; /* Ajuster le padding pour un look plus moderne */
+  border-bottom: none;
+  font-weight: 600; /* Texte de l'en-tête plus épais */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 1. Jaune Doux/Doré pour "Prêt à livrer" (Soft Gold/Amber) */
+.commande-card.status-pretalivrer .card-header {
+  background-color: #FFECB3;
+  /* Jaune pastel, doux et chaleureux */
+  color: #5D4037;
+  /* Marron foncé pour un contraste élégant */
+}
+
+/* 2. Bleu Clair Ciel pour "Non confirmé" (Soft Sky Blue) */
+.commande-card.status-nonconfirme .card-header {
+  background-color: #BBDEFB;
+  /* Bleu ciel très clair et apaisant */
+  color: #1976D2;
+  /* Bleu plus profond pour le texte */
+}
+
+/* 3. Vert Clair Herbe pour "En préparation" (Soft Meadow Green) */
+.commande-card.status-enpreparation .card-header {
+  background-color: #C8E6C9;
+  /* Vert menthe très clair */
+  color: #388E3C;
+  /* Vert forêt pour un contraste subtil */
+}
+
+/* 4. Violet Lavande pour "Confirmé" (Soft Lavender) */
+.commande-card.status-confirme .card-header {
+  background-color: #E1BEE7;
+  /* Lavande douce et raffinée */
+  color: #7B1FA2;
+  /* Violet aubergine pour le texte */
+}
+
+/* 5. Rouge Brique Doux pour "Annulé" (Muted Terracotta Red) */
+.commande-card.status-annule .card-header {
+  background-color: #FFCDD2;
+  /* Rouge rosé très pâle */
+  color: #D32F2F;
+  /* Rouge brique pour indiquer l'annulation sans agressivité */
+  text-decoration: line-through;
+  /* Optionnel: barrer le texte pour les commandes annulées */
+}
+
+.commande-card.status-annule {
+  opacity: 0.65;
+  /* Opacité légèrement réduite pour les annulées */
+}
+
+/* 6. Vert Eau/Menthe pour "Envoyé" (Cool Teal/Mint Green) */
+.commande-card.status-envoye .card-header {
+  background-color: #B2DFDB;
+  /* Vert d'eau très clair et rafraîchissant */
+  color: #00796B;
+  /* Vert sarcelle foncé pour le texte */
+}
+
+/* Styles pour "Échange" si non défini, reprenons le violet doux de "Confirmé" */
+.commande-card.status-echange .card-header {
+  background-color: #E1BEE7;
+  /* Même violet lavande que 'Confirmé' */
+  color: #7B1FA2;
+  /* Même violet aubergine que 'Confirmé' */
+}
 /* Styles responsives (inchangés) */
 @media (max-width: 768px) {
   .commandes-filters-bar {
     flex-direction: column;
     gap: 15px;
   }
+
   .commandes-search-input,
   .commandes-status-filter {
     min-width: 100%;
   }
+
   .commandes-list-container {
     grid-template-columns: 1fr;
   }
+
   .commandes-page-content {
     padding: 15px;
   }
+
   .commandes-page-content h1 {
     font-size: 1.8rem;
     margin-bottom: 20px;
     margin-left: 0;
     text-align: center;
   }
+
   .card-header,
   .card-body,
   .card-footer {
@@ -502,30 +633,42 @@ body {
   /* MODIFIÉ : Résumé sur mobile */
   .financial-summary-container {
     padding: 15px;
-    grid-template-columns: 1fr; /* Une seule colonne sur mobile */
+    grid-template-columns: 1fr;
+    /* Une seule colonne sur mobile */
   }
-  .financial-summary-container .summary-line > span:last-child,
+
+  .financial-summary-container .summary-line>span:last-child,
   .financial-summary-container .summary-line.dtf-line input[type="number"] {
     text-align: right;
-    justify-self: end; /* S'assure que tout est aligné à droite */
+    justify-self: end;
+    /* S'assure que tout est aligné à droite */
   }
+
   .summary-costs-grid {
-    grid-template-columns: 1fr; /* 1 colonne */
+    grid-template-columns: 1fr;
+    /* 1 colonne */
     gap: 5px;
-    text-align: left; /* Aligne le texte à gauche */
+    text-align: left;
+    /* Aligne le texte à gauche */
   }
+
   .summary-costs-grid .cost-item {
     display: flex;
-    justify-content: space-between; /* Met le prix à droite */
+    justify-content: space-between;
+    /* Met le prix à droite */
     align-items: center;
   }
+
   .summary-costs-grid .cost-item span {
-    display: inline; /* Revient en ligne */
+    display: inline;
+    /* Revient en ligne */
     margin-bottom: 0;
   }
+
   .summary-costs-grid .cost-item strong {
     display: inline;
   }
+
   .financial-summary-container .summary-line.dtf-line {
     display: grid;
     grid-template-columns: 1fr auto;
