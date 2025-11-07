@@ -1,6 +1,9 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 =======
+=======
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 >>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 import './CommandesPage.css';
@@ -97,7 +100,11 @@ function CommandesPage({ token, user, onUserUpdate }) {
   const fetchSummary = useCallback(async () => {
     if (!token) return;
 <<<<<<< HEAD
+<<<<<<< HEAD
     console.log(` -> Appel fetchSummary avec filtre: ${statusFilter}`); 
+=======
+    console.log(` -> Appel fetchSummary avec filtre: ${statusFilter}`); // Log de débogage
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 =======
     console.log(` -> Appel fetchSummary avec filtre: ${statusFilter}`); // Log de débogage
 >>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
@@ -113,7 +120,11 @@ function CommandesPage({ token, user, onUserUpdate }) {
       console.error("Erreur fetchSummary:", err);
       setFinancialSummary({ gainPotentiel: 0, totalCommandes: 0, totalLivraison: 0, totalCoutArticles: 0 });
 <<<<<<< HEAD
+<<<<<<< HEAD
       setError(`Erreur calcul résumé: ${err.message}`); 
+=======
+      setError(`Erreur calcul résumé: ${err.message}`); // Affiche l'erreur
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 =======
       setError(`Erreur calcul résumé: ${err.message}`); // Affiche l'erreur
 >>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
@@ -152,6 +163,11 @@ function CommandesPage({ token, user, onUserUpdate }) {
     } catch (err) {
       console.error("Erreur handleImport:", err);
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+      // Ne met pas d'erreur persistante si le problème est juste 'Aucun lien Google Sheet',
+      // car le formulaire d'URL prend le dessus.
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 =======
       // Ne met pas d'erreur persistante si le problème est juste 'Aucun lien Google Sheet',
       // car le formulaire d'URL prend le dessus.
@@ -175,6 +191,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
       return;
     }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     // --- Logique de Chargement Initial (Exécuté une seule fois par session) ---
     if (!hasInitialImportRun.current) {
@@ -220,6 +237,8 @@ function CommandesPage({ token, user, onUserUpdate }) {
   // Dépendances : Gardez-les ainsi
   }, [token, statusFilter, fetchCommandes, fetchSummary, handleImport]);
 =======
+=======
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
     const loadData = async () => {
       setLoading(true); 
       setError('');
@@ -258,6 +277,9 @@ function CommandesPage({ token, user, onUserUpdate }) {
 
   // Dépendances : Gardez-les ainsi
   }, [token, statusFilter, fetchCommandes, fetchSummary, handleImport, allCommandes.length]);
+<<<<<<< HEAD
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
+=======
 >>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
   // --- FIN DU NOUVEAU useEffect ---
 
@@ -270,7 +292,11 @@ function CommandesPage({ token, user, onUserUpdate }) {
   }, [financialSummary.gainPotentiel, manualDTF]);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   // Commandes affichées (filtrage instantané en frontend)
+=======
+  // Commandes affichées (inchangée)
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 =======
   // Commandes affichées (inchangée)
 >>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
@@ -580,8 +606,11 @@ function CommandesPage({ token, user, onUserUpdate }) {
                       )}
                     </select>
 <<<<<<< HEAD
+<<<<<<< HEAD
                 </div>
 =======
+=======
+>>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
                   </div>
 >>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
                 </div>
