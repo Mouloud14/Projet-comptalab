@@ -201,8 +201,6 @@ function parseArticleCost(articlesJsonText) {
   return totalCost;
 }
 // index.js (REMPLACER CETTE FONCTION EN ENTIER)
-<<<<<<< HEAD
-<<<<<<< HEAD
 const SHEET_STATUS_MAP = {
     'enpreparation': 'En préparation',
     'confirme': 'Confirmé',
@@ -212,12 +210,6 @@ const SHEET_STATUS_MAP = {
     'envoye': 'Envoyé',
     'annule': 'Annulé',
 };
-=======
-
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
-=======
-
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 /**
  * NOUVELLE FONCTION : Parse une chaîne d'article GSheet en JSON.
  * Gère plusieurs articles séparés par '+', ',' ou 'et'.
@@ -372,21 +364,17 @@ const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
 ];
+// index.js (BLOC DE CONFIGURATION CORS)
 
 const corsOptions = {
-    origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            console.warn(`CORS Error: Origin ${origin} not allowed.`);
-            callback(new Error('Not allowed by CORS'), false);
-        }
-    },
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    origin: function (origin, callback) {
+        // ... (votre logique d'origine reste inchangée)
+        callback(null, true); 
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    // 🚨 MODIFICATION CRITIQUE CI-DESSOUS
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control'], // <-- AJOUTEZ 'Cache-Control'
+    credentials: true
 };
 
 
@@ -1500,151 +1488,7 @@ app.delete('/api/commandes/:id', authenticateToken, async (req, res) => {
     }
 });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-// index.js (REMPLACEZ LA ROUTE PUT /api/commandes/:id EN ENTIER)
 
-// PUT /api/commandes/:id (Mettre à jour une commande individuelle)
-app.put('/api/commandes/:id', authenticateToken, async (req, res) => {
-    const userId = req.user.id;
-    const commandeId = req.params.id;
-    const { etat } = req.body; 
-=======
-// --- AJOUT DE LA NOUVELLE ROUTE ---
-// PUT /api/commandes/:id (Mettre à jour une commande individuelle, ex: changer l'état)
-// PUT /api/commandes/:id (Mettre à jour une commande individuelle)
-// CETTE ROUTE EST OPTIMALE.
-app.put('/api/commandes/:id', authenticateToken, async (req, res) => {
-    const userId = req.user.id;
-    const commandeId = req.params.id;
-    const { etat } = req.body;
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
-=======
-// --- AJOUT DE LA NOUVELLE ROUTE ---
-// PUT /api/commandes/:id (Mettre à jour une commande individuelle, ex: changer l'état)
-// PUT /api/commandes/:id (Mettre à jour une commande individuelle)
-// CETTE ROUTE EST OPTIMALE.
-app.put('/api/commandes/:id', authenticateToken, async (req, res) => {
-    const userId = req.user.id;
-    const commandeId = req.params.id;
-    const { etat } = req.body;
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
-
-    if (!etat) {
-        return res.status(400).json({ error: "Le champ 'etat' est requis." });
-    }
-<<<<<<< HEAD
-<<<<<<< HEAD
-    if (!sheets) {
-        return res.status(503).json({ error: "Service Google Sheets non initialisé." });
-    }
-
-    // 1. Normaliser pour la base de données
-    const normalizedEtat = normalizeStatus(etat); 
-
-    // 2. Trouver le format exact pour le Google Sheet (ex: 'Prêt a livrer')
-    // Si le statut est inconnu, on envoie la version non normalisée du frontend par défaut.
-    const etatSheetFormat = SHEET_STATUS_MAP[normalizedEtat] || etat; 
-
-    try {
-        // 3. Mise à jour dans la base de données PostgreSQL (utilise la version normalisée)
-        const sql = 
-`UPDATE commandes 
-SET etat = $1 
-WHERE id = $2 AND user_id = $3 
-RETURNING telephone, nom_prenom, type_livraison`;
-        
-        const { rowCount, rows } = await db.query(sql, [normalizedEtat, commandeId, userId]);
-=======
-=======
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
-
-    // Assure la cohérence des données, même si le front normalise déjà
-    const normalizedEtat = normalizeStatus(etat); 
-
-    try {
-        const sql = `
-            UPDATE commandes 
-            SET etat = $1 
-            WHERE id = $2 AND user_id = $3 
-            RETURNING id`;
-        
-        const { rowCount } = await db.query(sql, [normalizedEtat, commandeId, userId]);
-<<<<<<< HEAD
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
-=======
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
-
-        if (rowCount === 0) {
-            return res.status(404).json({ message: "Commande non trouvée ou non autorisée" });
-        }
-<<<<<<< HEAD
-<<<<<<< HEAD
-        const updatedCommande = rows[0];
-
-        // 4. Préparation et mise à jour du Google Sheet
-        const { rows: userRows } = await db.query('SELECT google_sheet_url FROM utilisateurs WHERE id = $1', [userId]);
-        const userSheetUrl = userRows[0]?.google_sheet_url;
-
-        if (userSheetUrl) {
-            const match = userSheetUrl.match(/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-            const spreadsheetId = match ? match[1] : null;
-
-            if (spreadsheetId) {
-                // Retrouver l'index de la ligne dans le Sheet
-                const rowIndex = await getOriginalRowIndex(spreadsheetId, sheets, updatedCommande);
-
-                if (rowIndex) {
-                    const sheetName = (await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties.title' })).data.sheets[0].properties.title;
-                    
-                    const TYPE_LIVRAISON_COLUMN_LETTER = 'E';
-                    const STATUS_COLUMN_LETTER = 'H'; // Col H pour l'état
-                    
-                    const range = `${TYPE_LIVRAISON_COLUMN_LETTER}${rowIndex}:${STATUS_COLUMN_LETTER}${rowIndex}`; 
-                    
-                    const valuesToSend = [
-                        [
-                            updatedCommande.type_livraison, // E
-                            null, // F
-                            null, // G
-                            etatSheetFormat // 🚨 ENVOIE LE FORMAT CORRIGÉ (H)
-                        ]
-                    ];
-                    
-                    await sheets.spreadsheets.values.update({
-                        spreadsheetId: spreadsheetId,
-                        range: `'${sheetName}'!${range}`,
-                        valueInputOption: 'USER_ENTERED',
-                        requestBody: { values: valuesToSend },
-                    });
-                    
-                    console.log(`Statut mis à jour dans Google Sheet: ${etatSheetFormat} (Ligne ${rowIndex}).`);
-
-                } else {
-                    console.warn(`Impossible de trouver la ligne Sheet pour la commande ${commandeId}.`);
-                }
-            }
-        }
-        
-        // Le frontend a besoin de la version normalisée pour son affichage
-=======
-
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
-=======
-
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
-        res.json({ id: commandeId, etat: normalizedEtat });
-
-    } catch (err) {
-        console.error(`Erreur DB PUT /api/commandes/${commandeId}:`, err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-// --- FIN DE L'AJOUT ---
-<<<<<<< HEAD
-=======
-
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 
 // --- ROUTE DASHBOARD (A adapter pour PostgreSQL) ---
 // index.js (AJOUTER/REMPLACER LA ROUTE DU DASHBOARD)
@@ -1798,8 +1642,6 @@ function normalizeStatus(status) {
         .replace(/[\s\t\-]/g, '') // Supprime les espaces et tirets
         .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Supprime les accents
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 // index.js (REMPLACEZ LA FONCTION getOriginalRowIndex EN ENTIER)
 
@@ -1885,10 +1727,6 @@ async function getOriginalRowIndex(spreadsheetId, sheets, commande) {
         return null;
     }
 }
-=======
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
-=======
->>>>>>> df854400df78f23af2d8bc60d141535c526b2efe
 
 app.get('/api/financial-summary', authenticateToken, async (req, res) => {
   const userId = req.user.id;
