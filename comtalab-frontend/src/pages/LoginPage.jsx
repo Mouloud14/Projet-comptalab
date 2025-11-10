@@ -13,8 +13,8 @@ function LoginPage({ onLogin }) { // Reçoit la fonction onLogin de App.jsx
   const [isRegisterMode, setIsRegisterMode] = useState(false);
 
   // Utilisez l'URL de votre backend Render/Vercel/etc. ou localhost:3001
-  const BASE_API_URL = 'http://localhost:3001/api';
-  // Si vous testez en local, changez pour: const BASE_API_URL = 'http://localhost:3001/api'; 
+  const BASE_API_URL = `${import.meta.env.VITE_API_URL}`;
+  // Si vous testez en local, changez pour: const BASE_API_URL = '`${import.meta.env.VITE_API_URL}`/api'; 
 
   const handleSubmit = async (event) => {
     event.preventDefault();

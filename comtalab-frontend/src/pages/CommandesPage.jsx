@@ -65,7 +65,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
   const fetchCommandes = useCallback(async (showAlert = false) => {
     setError(''); // Réinitialise l'erreur au début de la lecture
     try {
-      const response = await fetch('http://localhost:3001/api/commandes', {
+      const response = await fetch('`${import.meta.env.VITE_API_URL}`/api/commandes', {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Cache-Control': 'no-cache' // Assure qu'on ne lit pas le cache du navigateur
@@ -100,7 +100,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
     console.log(` -> Appel fetchSummary avec filtre: ${statusFilter}`); 
     const filterParam = encodeURIComponent(statusFilter);
     try {
-      const response = await fetch(`http://localhost:3001/api/financial-summary?filter=${filterParam}`, {
+      const response = await fetch(``${import.meta.env.VITE_API_URL}`/api/financial-summary?filter=${filterParam}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) { throw new Error('Erreur chargement résumé financier'); }
@@ -123,7 +123,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3001/api/import-sheets', {
+      const response = await fetch('`${import.meta.env.VITE_API_URL}`/api/import-sheets', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -233,7 +233,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
     setUpdatingStatus(commandeId);
     setError('');
     try {
-      const response = await fetch(`http://localhost:3001/api/commandes/${commandeId}`, {
+      const response = await fetch(``${import.meta.env.VITE_API_URL}`/api/commandes/${commandeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ etat: newStatus }) 
@@ -271,7 +271,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
     e.preventDefault();
     setUrlSaveMessage('');
     try {
-      const response = await fetch('http://localhost:3001/api/user/sheet-link', {
+      const response = await fetch('`${import.meta.env.VITE_API_URL}`/api/user/sheet-link', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ googleSheetUrl: sheetUrl })

@@ -67,7 +67,7 @@ function App() {
     if (!token) return;
     try {
       // CORRECTION CRITIQUE APPLIQUÉE ICI : /api/transactions
-      const response = await fetch('http://localhost:3001/api/transactions', {
+      const response = await fetch('`${import.meta.env.VITE_API_URL}`/api/transactions', {
         cache: 'no-store',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -92,7 +92,7 @@ function App() {
     if (!token) return;
     console.log("Auto-Sync: Démarrage...");
     try {
-      const response = await fetch('http://localhost:3001/api/import-sheets', { 
+      const response = await fetch('`${import.meta.env.VITE_API_URL}`/api/import-sheets', { 
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -151,7 +151,7 @@ function App() {
     if (!window.confirm("Es-tu sûr de vouloir supprimer cette transaction ?")) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/transactions/${idASupprimer}`, {
+      const response = await fetch(``${import.meta.env.VITE_API_URL}`/api/transactions/${idASupprimer}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

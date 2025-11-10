@@ -25,7 +25,7 @@ function HomePage({ username, currentBalance, token, transactionsDuJour }) {
       try {
 
         // Appel de la nouvelle route d'API du dashboard
-        const response = await fetch('http://localhost:3001/api/dashboard-data', {
+        const response = await fetch('`${import.meta.env.VITE_API_URL}`/api/dashboard-data', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 

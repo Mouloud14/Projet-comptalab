@@ -81,7 +81,7 @@ function AddRetourItemForm({ onRetourAdded, token }) {
 
     try {
       console.log('Envoi au backend (retours):', newItem);
-      const response = await fetch('http://localhost:3001/api/retours', {
+      const response = await fetch('`${import.meta.env.VITE_API_URL}`/api/retours', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -163,7 +163,7 @@ function RetoursPage({ token }) {
   const fetchStock = useCallback(async () => {
     setError(null);
     try {
-      const response = await fetch('http://localhost:3001/api/retours', {
+      const response = await fetch('`${import.meta.env.VITE_API_URL}`/api/retours', {
         cache: 'no-store',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -200,7 +200,7 @@ function RetoursPage({ token }) {
     if (!window.confirm(`Es-tu sûr de vouloir supprimer cet article en retour ?\n\n"${itemTitle}"\n\nAction irréversible !`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/retours/${itemId}`, {
+      const response = await fetch(``${import.meta.env.VITE_API_URL}`/api/retours/${itemId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -229,7 +229,7 @@ const handleDeleteModelGroup = async (item) => {
     if (!window.confirm(`Es-tu sûr de vouloir supprimer TOUS les retours du modèle "${cardTitle}" ?\nCette action est irréversible !`)) { return; }
 
     try {
-        const url = `http://localhost:3001/api/retours/group?nom=${encodeURIComponent(item.nom)}&style=${encodeURIComponent(item.style || '')}&taille=${encodeURIComponent(item.taille || '')}&description=${encodeURIComponent(item.description || '')}`;
+        const url = ``${import.meta.env.VITE_API_URL}`/api/retours/group?nom=${encodeURIComponent(item.nom)}&style=${encodeURIComponent(item.style || '')}&taille=${encodeURIComponent(item.taille || '')}&description=${encodeURIComponent(item.description || '')}`;
         
         const response = await fetch(url, { 
             method: 'DELETE', 
