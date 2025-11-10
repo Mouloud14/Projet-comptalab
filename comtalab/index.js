@@ -364,8 +364,13 @@ const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
 ];
+<<<<<<< HEAD
 // index.js (BLOC DE CONFIGURATION CORS)
 
+=======
+
+
+>>>>>>> 585b8cacde9665d72995730fcbd211ccd64fb4d7
 const corsOptions = {
     origin: function (origin, callback) {
         // ... (votre logique d'origine reste inchangée)
