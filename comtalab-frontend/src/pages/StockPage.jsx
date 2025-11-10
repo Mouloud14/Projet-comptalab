@@ -148,7 +148,7 @@ function AddStockItemForm({ onStockAdded }) {
       console.log('Envoi au backend:', newItem);
       const token = localStorage.getItem('token');
 
-      const response = await fetch('`${import.meta.env.VITE_API_URL}`/api/stock', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -384,7 +384,7 @@ function StockPage() {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('`${import.meta.env.VITE_API_URL}`/api/stock', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stock`, {
         cache: 'no-store',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -415,7 +415,7 @@ function StockPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(``${import.meta.env.VITE_API_URL}`/api/stock/${itemId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stock/${itemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ quantite: newQuantity }),
@@ -438,7 +438,7 @@ function StockPage() {
 
     if (!window.confirm(`Es-tu sûr de vouloir supprimer TOUS les articles "${cardTitle}" ?\nCette action est irréversible !`)) { return; }
 
-    const url = ``${import.meta.env.VITE_API_URL}`/api/stock/group?nom=${encodeURIComponent(nomKey)}&couleur=${encodeURIComponent(groupInfo.displayCouleur)}${styleKey ? `&style=${encodeURIComponent(styleKey)}` : ''}`;
+    const url = `${import.meta.env.VITE_API_URL}/api/stock/group?nom=${encodeURIComponent(nomKey)}&couleur=${encodeURIComponent(groupInfo.displayCouleur)}${styleKey ? `&style=${encodeURIComponent(styleKey)}` : ''}`;
 
     try {
       const token = localStorage.getItem('token');

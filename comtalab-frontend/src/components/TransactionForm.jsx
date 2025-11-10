@@ -59,7 +59,7 @@ function TransactionForm({
     };
     
     const isEditMode = transactionToEdit !== null;
-    const url = isEditMode ? ``${import.meta.env.VITE_API_URL}`/api/transactions/${transactionToEdit.id}` : '`${import.meta.env.VITE_API_URL}`/api/transactions';
+    const url = isEditMode ? `${import.meta.env.VITE_API_URL}/api/transactions/${transactionToEdit.id}` : `${import.meta.env.VITE_API_URL}/api/transactions`;
     const method = isEditMode ? 'PUT' : 'POST';
 
     try {
