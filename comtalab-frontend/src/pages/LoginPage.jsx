@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
 import './LoginPage.css';
-// Ligne 4 : require('dotenv').config(); - Supprimée pour la compatibilité navigateur.
-
-// Les fonctions et constantes du backend (parseArticleCost, BUNDLES, articleDetails, etc.)
-// ont été retirées du fichier pour éviter les erreurs ReferenceError dans le navigateur.
 
 function LoginPage({ onLogin }) { // Reçoit la fonction onLogin de App.jsx
   const [username, setUsername] = useState('');
@@ -12,9 +8,9 @@ function LoginPage({ onLogin }) { // Reçoit la fonction onLogin de App.jsx
   const [message, setMessage] = useState('');
   const [isRegisterMode, setIsRegisterMode] = useState(false);
 
-
+  // Utilisez l'URL de votre backend Render/Vercel/etc. ou localhost:3001
+  // Correction 1: S'assurer que le backtick est bien là
   const BASE_API_URL = `${import.meta.env.VITE_API_URL}`;
-
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -29,10 +25,10 @@ function LoginPage({ onLogin }) { // Reçoit la fonction onLogin de App.jsx
       return;
     }
 
-    const apiUrl = isRegisterMode 
-      ? `${BASE_API_URL}/register` 
-      : `${BASE_API_URL}/login`;
-
+    // Correction 2: Ajouter le préfixe /api/ aux routes
+    const apiEndpoint = isRegisterMode ? 'register' : 'login';
+    const apiUrl = `${BASE_API_URL}/api/${apiEndpoint}`;
+    
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -40,6 +36,18 @@ function LoginPage({ onLogin }) { // Reçoit la fonction onLogin de App.jsx
         body: JSON.stringify({ username: trimmedUsername, password: trimmedPassword }),
       });
       
+      // Assurez-vous que le serveur a répondu avant d'essayer de parser le JSON
+      if (response.status === 204) { // No Content
+          // Gérer le cas où le serveur envoie un 204 vide
+          if (isRegisterMode) {
+              setMessage("Compte créé avec succès ! Vous pouvez maintenant vous connecter.");
+              setIsRegisterMode(false);
+              setUsername('');
+              setPassword('');
+              return;
+          }
+      }
+
       const data = await response.json();
 
       if (response.ok) {
