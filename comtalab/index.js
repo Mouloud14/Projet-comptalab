@@ -357,12 +357,11 @@ const saltRounds = 10;
 // Lettre de la colonne "etat de livraison" (c'est la 9ème, donc 'I')
 const STATUS_COLUMN_LETTER = 'I';
 
-// -----------------------------------------------------------------------
-// CORRECTION CRITIQUE CORS : Autorise le frontend local
-// -----------------------------------------------------------------------
+
 const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://projet-comptalab.vercel.app' 
 ];
 
 const corsOptions = {
