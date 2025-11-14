@@ -1,3 +1,5 @@
+// src/pages/CommandesPage.jsx (Mise à jour pour la synchronisation Sheets)
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import './CommandesPage.css';
 
@@ -16,31 +18,31 @@ const formatArticles = (articlesJson) => {
     if (!Array.isArray(articles) || articles.length === 0) return '-';
 
     const formatted = articles.map(art => {
-        const quantity = art.quantite || 1;
-        const name = art.nom || 'Article inconnu';
-        // Le backend place le style extrait ici.
-        const styleDisplay = art.style ? ` (${art.style})` : ''; 
-        
-        let articleString = `${name}${styleDisplay}`;
+        const quantity = art.quantite || 1;
+        const name = art.nom || 'Article inconnu';
+        // Le backend place le style extrait ici.
+        const styleDisplay = art.style ? ` (${art.style})` : ''; 
+        
+        let articleString = `${name}${styleDisplay}`;
 
-        // NOUVEAU: Préfixe la quantité seulement si elle est > 1.
-        if (quantity > 1) {
-             articleString = `${quantity} x ${articleString}`;
-        }
-        
-        return articleString;
-    });
+        // NOUVEAU: Préfixe la quantité seulement si elle est > 1.
+        if (quantity > 1) {
+             articleString = `${quantity} x ${articleString}`;
+        }
+        
+        return articleString;
+    });
 
-    // NOUVEAU: Jointure des éléments pour former une phrase naturelle (utilise " et " pour le dernier)
-    if (formatted.length === 1) {
-        return formatted[0];
-    }
-    
-    const lastItem = formatted.pop();
-    // Utilise une virgule seulement si plus de deux articles
-    const prefix = formatted.length > 0 ? formatted.join(', ') + ' et ' : ''; 
-    
-    return prefix + lastItem;
+    // NOUVEAU: Jointure des éléments pour former une phrase naturelle (utilise " et " pour le dernier)
+    if (formatted.length === 1) {
+        return formatted[0];
+    }
+    
+    const lastItem = formatted.pop();
+    // Utilise une virgule seulement si plus de deux articles
+    const prefix = formatted.length > 0 ? formatted.join(', ') + ' et ' : ''; 
+    
+    return prefix + lastItem;
 
   } catch (e) {
     // Fallback si ce n'est pas du JSON (ancien format GSheet)
@@ -203,13 +205,13 @@ function CommandesPage({ token, user, onUserUpdate }) {
         await fetchCommandes(); 
         await fetchSummary();
 
-        // 2. 🚨 NOUVEAU : Si l'utilisateur n'a pas de lien Sheets, déclencher l'importation silencieuse.
-        // L'échec de cet import mettra l'état 'error' et affichera le formulaire.
-        if (!user?.google_sheet_url && !hasInitialImportRun.current) {
-            console.log("Tentative d'importation silencieuse pour un nouvel utilisateur...");
-            await handleImport(false); 
-            hasInitialImportRun.current = true; // Empêche l'appel répété
-        }
+        // 2. 🚨 NOUVEAU : Si l'utilisateur n'a pas de lien Sheets, déclencher l'importation silencieuse.
+        // L'échec de cet import mettra l'état 'error' et affichera le formulaire.
+        if (!user?.google_sheet_url && !hasInitialImportRun.current) {
+            console.log("Tentative d'importation silencieuse pour un nouvel utilisateur...");
+            await handleImport(false); 
+            hasInitialImportRun.current = true; // Empêche l'appel répété
+        }
 
 
       } catch (e) {
@@ -268,43 +270,57 @@ function CommandesPage({ token, user, onUserUpdate }) {
     });
   }, [allCommandes, statusFilter, searchTerm, statutsActifs]);
 
-  // --- Mise à jour du statut (VERS LA DB POSTGRES) ---
-  const handleStatusChange = async (commandeId, newStatus) => {
+// --- Mise à jour du statut (VERS LA DB POSTGRES ET SHEETS) ---
+ const handleStatusChange = async (commandeId, newStatus) => {
     setUpdatingStatus(commandeId);
     setError('');
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/commandes/${commandeId}`, {
+      // 1. MISE À JOUR DE LA BASE DE DONNÉES POSTGRES
+      const dbUpdateResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/commandes/${commandeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ etat: newStatus }) 
+        body: JSON.stringify({ etat: newStatus }) // newStatus est la chaîne non normalisée (ex: "Prêt a livrer")
       });
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || `Erreur ${response.status}`);
+      if (!dbUpdateResponse.ok) {
+        const errData = await dbUpdateResponse.json();
+        throw new Error(errData.error || `Erreur DB ${dbUpdateResponse.status}`);
       }
 
-      // Rafraîchissement léger et rapide
-      // 1. Mettre à jour l'état local
+      // 2. 🚨 APPEL DE LA SYNCHRONISATION VERS GOOGLE SHEETS
+      // On utilise l'endpoint que vous avez ajouté dans le backend pour la synchro Sheets.
+      const sheetSyncResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/commandes/${commandeId}/sync-sheet`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ newStatus: newStatus }) // On envoie la valeur lisible par Sheets (ex: "Prêt a livrer")
+      });
+
+      if (!sheetSyncResponse.ok) {
+           console.warn(`Avertissement: Échec de la synchronisation Sheets pour la commande ${commandeId}. Veuillez re-synchroniser manuellement.`);
+      }
+      
+      // 3. Mise à jour de l'état local (Optimiste)
       setAllCommandes(prevCommandes => 
         prevCommandes.map(cmd => 
           cmd.id === commandeId ? { ...cmd, etat: normalizeStatus(newStatus) } : cmd
         )
       );
       
-      // 2. Relancer le calcul du résumé
+      // 4. Relancer le calcul du résumé
       await fetchSummary(); 
       
       setUpdatingStatus(null);
 
     } catch (err) {
-      console.error("Erreur handleStatusChange (DB):", err);
+      console.error("Erreur handleStatusChange (GLOBAL):", err);
       setError(`Erreur mise à jour statut: ${err.message}`);
       setUpdatingStatus(null);
-      // En cas d'erreur, re-fetch tout pour être sûr
+      // En cas d'erreur DB, re-fetch tout pour être sûr
       fetchCommandes();
     }
-  };
+ };
+// --- FIN Mise à jour du statut ---
+
 
   // handleSaveSheetUrl: (Inchangé)
   const handleSaveSheetUrl = async (e) => {
@@ -440,9 +456,9 @@ function CommandesPage({ token, user, onUserUpdate }) {
           <option value="actifs">Commandes Actives (Défaut)</option>
           <option value="tous">Toutes (Sauf Annulées)</option>
           <option disabled>---</option>
-          {allSelectableStatuses.map(status => (
-            <option key={status} value={status}>
-              {status}
+          {allSelectableStatuses.map(niceStatus => (
+            <option key={niceStatus} value={niceStatus}>
+              {niceStatus}
             </option>
           ))}
         </select>
@@ -527,7 +543,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
                         const uglyStatusValue = normalizeStatus(niceStatus);
                         
                         return (
-                          <option key={uglyStatusValue} value={uglyStatusValue}>
+                          <option key={uglyStatusValue} value={niceStatus}>
                             {niceStatus}
                           </option>
                         );

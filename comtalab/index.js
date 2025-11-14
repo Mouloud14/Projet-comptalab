@@ -546,6 +546,7 @@ try {
         article_json TEXT NULL, /* Détails des articles (pour les dettes de stock) */
         is_paid BOOLEAN NOT NULL DEFAULT FALSE,
         date_owed TEXT NOT NULL,
+        commentaire TEXT NULL,
         user_id INTEGER NOT NULL
     );
 `, 'dettes');
@@ -843,6 +844,77 @@ app.post('/api/import-sheets', authenticateToken, async (req, res) => {
         res.status(500).json({ error: `Erreur serveur lors de l'importation: ${err.message}` });
     } finally {
         console.log(`Importation (User ${userId}) terminée.`);
+    }
+});
+
+// comtalab/index.js (AJOUTER CE BLOC APRÈS app.put('/api/commandes/:id', ...))
+
+// PUT /api/commandes/:id/sync-sheet
+// PUT /api/commandes/:id/sync-sheet
+// Synchronise l'état de la DB vers le Google Sheet pour une seule commande
+app.put('/api/commandes/:id/sync-sheet', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const commandeId = req.params.id;
+    // Le statut tel qu'il doit être affiché dans Sheets (ex: "Prêt a livrer")
+    const { newStatus } = req.body; 
+
+    if (!newStatus) {
+        return res.status(400).json({ error: 'newStatus est requis.' });
+    }
+    if (!db || !sheets) {
+        return res.status(503).json({ error: "Service DB ou Google Sheets non disponible." });
+    }
+
+    try {
+        // 1. Récupérer l'URL du Sheet et les détails de la commande depuis la DB
+        const { rows: userRows } = await db.query('SELECT google_sheet_url FROM utilisateurs WHERE id = $1', [userId]);
+        const userSheetUrl = userRows[0]?.google_sheet_url;
+        if (!userSheetUrl) {
+            return res.status(200).json({ message: "OK: Pas de lien Google Sheet, synchro ignorée." });
+        }
+        const match = userSheetUrl.match(/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+        if (!match) {
+            return res.status(400).json({ error: "Lien Google Sheet invalide." });
+        }
+        const spreadsheetId = match[1];
+
+        const { rows: commandeRows } = await db.query('SELECT * FROM commandes WHERE id = $1 AND user_id = $2', [commandeId, userId]);
+        const commande = commandeRows[0];
+        if (!commande) {
+            return res.status(404).json({ message: "Commande non trouvée ou non autorisée." });
+        }
+
+        // 2. Trouver le numéro de ligne dans le Google Sheet (utilise la fonction getOriginalRowIndex)
+        const rowIndex = await getOriginalRowIndex(spreadsheetId, sheets, commande); 
+
+        if (rowIndex === null) {
+            return res.status(200).json({ message: "OK: Ligne non trouvée dans le Sheet, synchro ignorée." });
+        }
+        
+        // 3. Mettre à jour le statut dans Google Sheets
+        const metaResponse = await sheets.spreadsheets.get({
+            spreadsheetId: spreadsheetId,
+            fields: 'sheets.properties.title'
+        });
+        const sheetName = metaResponse.data.sheets[0].properties.title;
+        
+        // STATUS_COLUMN_LETTER est défini en haut du fichier (colonne 'I')
+        const range = `${STATUS_COLUMN_LETTER}${rowIndex}`; 
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId: spreadsheetId,
+            range: `'${sheetName}'!${range}`, 
+            valueInputOption: 'USER_ENTERED',
+            requestBody: {
+                values: [[newStatus]],
+            },
+        });
+
+        res.json({ message: `Statut de la ligne ${rowIndex} mis à jour dans le Sheet à '${newStatus}'` });
+
+    } catch (err) {
+        console.error(`Erreur Sheets PUT /api/commandes/${commandeId}/sync-sheet:`, err.message);
+        res.status(500).json({ error: `Erreur synchro Sheets: ${err.message}` });
     }
 });
 
@@ -1897,32 +1969,34 @@ app.get('/api/financial-summary', authenticateToken, async (req, res) => {
 // comtalab/index.js (À insérer après la dernière route /api/stock ou /api/retours)
 
 // --- API DETTES & FOURNISSEURS ---
+// comtalab/index.js (Route POST /api/dettes)
 
-// POST /api/dettes (Ajouter une nouvelle dette)
 app.post('/api/dettes', authenticateToken, async (req, res) => {
     const userId = req.user.id;
-    const { contact_name, debt_type, amount, article_json, date_owed } = req.body;
+    // Ajout de 'commentaire'
+    const { contact_name, debt_type, amount, article_json, date_owed, comment } = req.body; 
     
     if (!contact_name || !debt_type || !date_owed) {
         return res.status(400).json({ error: 'Nom du contact, type de dette et date sont requis.' });
     }
 
     try {
-        // Calculer le montant final (réel ou estimé)
         const finalMontant = calculateDebtCost(debt_type, amount, article_json);
         
+        // REQUÊTE CORRIGÉE (7 colonnes, 7 paramètres)
         const sql = `
-            INSERT INTO dettes (user_id, contact_name, debt_type, montant, article_json, date_owed) 
-            VALUES ($1, $2, $3, $4, $5, $6) 
-            RETURNING id, montant, debt_type, contact_name`;
+            INSERT INTO dettes (user_id, contact_name, debt_type, montant, article_json, date_owed, commentaire) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7) 
+            RETURNING id, montant, debt_type, contact_name, is_paid, date_owed, article_json, commentaire`; // AJOUT DE 'commentaire' DANS RETURNING
 
         const { rows } = await db.query(sql, [
-            userId,
-            contact_name,
-            debt_type,
-            finalMontant,
-            article_json || null,
-            date_owed
+            userId,                          // $1
+            contact_name,                    // $2
+            debt_type,                       // $3
+            finalMontant,                    // $4
+            article_json || null,            // $5
+            date_owed,                       // $6
+            comment || null                  // $7 <-- LE 7ème PARAMÈTRE
         ]);
 
         res.status(201).json({ 
@@ -1930,6 +2004,9 @@ app.post('/api/dettes', authenticateToken, async (req, res) => {
             contact_name: rows[0].contact_name, 
             debt_type: rows[0].debt_type, 
             montant: rows[0].montant,
+            date_owed: rows[0].date_owed,
+            article_json: rows[0].article_json,
+            commentaire: rows[0].commentaire, // <-- RENVOI DU COMMENTAIRE
             is_paid: false 
         });
 
@@ -1938,7 +2015,6 @@ app.post('/api/dettes', authenticateToken, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
 
 // GET /api/dettes (Récupérer les dettes)
 app.get('/api/dettes', authenticateToken, async (req, res) => {

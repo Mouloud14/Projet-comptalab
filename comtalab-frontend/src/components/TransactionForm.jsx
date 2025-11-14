@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import './TransactionForm.css';
 
-const depenseCategories = [ 'DTF', 'STOCK', 'EURO', 'LIVREUR', 'TRANSPORT', 'FOOD', 'AUTRES' ];
+const depenseCategories = [ 'DTF', 'STOCK', 'EURO', 'LIVREUR', 'TRANSPORT', 'FOOD', 'AUTRES' ,'REMBOURSEMENT' ];
 const revenuCategories = [ 
   'ZR express', 
   'main a main', 
