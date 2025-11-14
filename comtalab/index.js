@@ -547,7 +547,7 @@ try {
         article_json TEXT NULL, /* Détails des articles (pour les dettes de stock) */
         is_paid BOOLEAN NOT NULL DEFAULT FALSE,
         date_owed TEXT NOT NULL,
-        comment TEXT NULL,
+        commentaire TEXT NULL,
         user_id INTEGER NOT NULL
     );
 `, 'dettes');
