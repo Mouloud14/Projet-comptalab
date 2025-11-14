@@ -2007,7 +2007,7 @@ app.post('/api/dettes', authenticateToken, async (req, res) => {
             montant: rows[0].montant,
             date_owed: rows[0].date_owed,
             article_json: rows[0].article_json,
-            commentaire: rows[0].commentaire, // <-- RENVOI DU COMMENTAIRE
+            commentaire:commentaire, // <-- RENVOI DU COMMENTAIRE
             is_paid: false 
         });
 
