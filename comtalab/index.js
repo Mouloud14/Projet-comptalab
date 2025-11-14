@@ -496,6 +496,7 @@ try {
                         style TEXT,
                         description TEXT,
                         user_id INTEGER NOT NULL,
+                        comment TEXT NULL
                         date_ajout TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
                     );
                 `, 'stock_retours');
