@@ -1510,7 +1510,7 @@ app.get('/api/retours', authenticateToken, async (req, res) => {
 // 4. POST NOUVEAU RETOUR
 app.post('/api/retours', authenticateToken, async (req, res) => {
     const userId = req.user.id;
-    const { nom, style, taille, couleur, description, comment} = req.body;
+    const { contact_name, debt_type, amount, article_json, date_owed, comment } = req.body;
 
     if (!nom || !description) {
         return res.status(400).json({ error: 'Nom et Description sont requis pour ajouter un retour.' });
