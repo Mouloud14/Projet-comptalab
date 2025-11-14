@@ -1974,7 +1974,7 @@ app.get('/api/financial-summary', authenticateToken, async (req, res) => {
 app.post('/api/dettes', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     // Ajout de 'commentaire'
-    const { contact_name, debt_type, amount, article_json, date_owed, comment } = req.body; 
+    const { contact_name, debt_type, amount, article_json, date_owed, commentaire } = req.body;
     
     if (!contact_name || !debt_type || !date_owed) {
         return res.status(400).json({ error: 'Nom du contact, type de dette et date sont requis.' });
@@ -2006,7 +2006,7 @@ app.post('/api/dettes', authenticateToken, async (req, res) => {
             montant: rows[0].montant,
             date_owed: rows[0].date_owed,
             article_json: rows[0].article_json,
-            commentaire:commentaire, // <-- RENVOI DU COMMENTAIRE
+            commentaire:comment, // <-- RENVOI DU COMMENTAIRE
             is_paid: false 
         });
 
