@@ -15,17 +15,38 @@ const formatArticles = (articlesJson) => {
     const articles = JSON.parse(articlesJson);
     if (!Array.isArray(articles) || articles.length === 0) return '-';
 
-    return articles.map(art =>
-      // Gère le cas où la quantité n'est pas définie (ex: import GSheet)
-      `${art.quantite || 1} x ${art.nom || 'Article inconnu'}${art.style ? ` (${art.style})` : ''}`
-    ).join(', ');
+    const formatted = articles.map(art => {
+        const quantity = art.quantite || 1;
+        const name = art.nom || 'Article inconnu';
+        // Le backend place le style extrait ici.
+        const styleDisplay = art.style ? ` (${art.style})` : ''; 
+        
+        let articleString = `${name}${styleDisplay}`;
+
+        // NOUVEAU: Préfixe la quantité seulement si elle est > 1.
+        if (quantity > 1) {
+             articleString = `${quantity} x ${articleString}`;
+        }
+        
+        return articleString;
+    });
+
+    // NOUVEAU: Jointure des éléments pour former une phrase naturelle (utilise " et " pour le dernier)
+    if (formatted.length === 1) {
+        return formatted[0];
+    }
+    
+    const lastItem = formatted.pop();
+    // Utilise une virgule seulement si plus de deux articles
+    const prefix = formatted.length > 0 ? formatted.join(', ') + ' et ' : ''; 
+    
+    return prefix + lastItem;
 
   } catch (e) {
     // Fallback si ce n'est pas du JSON (ancien format GSheet)
     return articlesJson || '-';
   }
 };
-// --- FIN ---
 
 // --- Fonction de Normalisation (Globale) ---
 const normalizeStatus = (str) => {
@@ -144,9 +165,19 @@ function CommandesPage({ token, user, onUserUpdate }) {
 
     } catch (err) {
       console.error("Erreur handleImport:", err);
-      if (err.message && !err.message.includes("Aucun lien Google Sheet")) {
-        setError(`Erreur d'importation: ${err.message}`);
+      
+      // --- CORRECTION DE LA LOGIQUE POUR LE FORMULAIRE DE LIEN ---
+      const errorMessage = err.message || 'Erreur inconnue.';
+
+      if (errorMessage.includes("Aucun lien Google Sheet")) {
+          // Si c'est l'erreur de lien, on la définit pour afficher le formulaire.
+          setError(errorMessage);
+      } else {
+          // Sinon, c'est une autre erreur d'importation.
+          setError(`Erreur d'importation: ${errorMessage}`);
       }
+      // --- FIN CORRECTION ---
+
       return false; 
     } finally {
       setIsImporting(false);
@@ -168,9 +199,18 @@ function CommandesPage({ token, user, onUserUpdate }) {
       setLoading(true);
       
       try {
-        // On lit l'état actuel de la DB (qui est censé être correct)
-        await fetchCommandes(); 
-        await fetchSummary();
+        // 1. Tenter le chargement des données actuelles
+        await fetchCommandes(); 
+        await fetchSummary();
+
+        // 2. 🚨 NOUVEAU : Si l'utilisateur n'a pas de lien Sheets, déclencher l'importation silencieuse.
+        // L'échec de cet import mettra l'état 'error' et affichera le formulaire.
+        if (!user?.google_sheet_url && !hasInitialImportRun.current) {
+            console.log("Tentative d'importation silencieuse pour un nouvel utilisateur...");
+            await handleImport(false); 
+            hasInitialImportRun.current = true; // Empêche l'appel répété
+        }
+
 
       } catch (e) {
         console.error("Erreur au chargement initial :", e);
@@ -182,7 +222,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
     // Exécution pour le montage initial et les changements de filtre
     loadData(); 
 
-  }, [token, statusFilter, fetchCommandes, fetchSummary]); 
+  }, [token, statusFilter, fetchCommandes, fetchSummary, handleImport, user?.google_sheet_url]); 
   // --- FIN DU useEffect STABLE ---
 
 
@@ -511,7 +551,7 @@ function CommandesPage({ token, user, onUserUpdate }) {
           )}
         </div>
       )}
-    </div>
+      </div>
   );
 }
 

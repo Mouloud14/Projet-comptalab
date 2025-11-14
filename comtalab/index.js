@@ -210,22 +210,19 @@ const SHEET_STATUS_MAP = {
     'envoye': 'Envoyé',
     'annule': 'Annulé',
 };
-/**
- * NOUVELLE FONCTION : Parse une chaîne d'article GSheet en JSON.
- * Gère plusieurs articles séparés par '+', ',' ou 'et'.
- */
+
+
 function parseGSheetArticleString(articlesStr) {
     if (!articlesStr || typeof articlesStr !== 'string') return '[]';
 
     const articles = [];
 
-    // Séparateurs : ',' ou '+' ou ' et ' (avec ou sans espaces)
-    const separators = /\s*(\s*\+\s*|\s*,\s*|\s+et\s+)\s*/i;
-    const items = articlesStr.split(separators).filter(item => {
-        // Filtre les éléments vides ou qui sont juste les séparateurs eux-mêmes
-        return item && item.trim() !== '' && !separators.test(item.trim());
-    });
-
+    // CORRECTION CRITIQUE: On utilise un groupe NON-CAPTURANT (?:...)
+    // pour que le split ne retourne que les articles. Ceci supprime le bug du mot "et".
+    const separatorsRegex = /\s*(?:\s*\+\s*|\s*,\s*|\s+et\s+)\s*/i;
+    
+    // split() avec un regex sans groupe de capture retourne seulement les morceaux (les articles).
+    const items = articlesStr.split(separatorsRegex).filter(item => item && item.trim() !== '');
 
     const qteRegex = /^\s*(\d+)\s*x\s*/i; // Ex: "1x "
     const styleRegex = /\((.*?)\)/; // Ex: "(Premium)"
@@ -290,9 +287,6 @@ function parseGSheetArticleString(articlesStr) {
     return JSON.stringify(articles);
 }
 
-// --- Fin des fonctions utilitaires de calcul ---
-
-// index.js (ZONE DE DÉFINITIONS GLOBALES - À INSÉRER)
 
 /**
  * NOUVELLE FONCTION : Calcule le coût de livraison
@@ -702,7 +696,7 @@ app.get('/api/transactions', authenticateToken, async (req, res) => {
 
 // index.js
 
-// ... (vos fonctions et définitions globales) ...
+// ... (Laissez le code précédent, y compris app.get('/api/transactions', ...))
 
 // POST /api/import-sheets (VERSION FINALE AVEC GESTION ROBUSTE DES TRANSACTIONS)
 app.post('/api/import-sheets', authenticateToken, async (req, res) => {
@@ -828,6 +822,45 @@ app.post('/api/import-sheets', authenticateToken, async (req, res) => {
         console.log(`Importation (User ${userId}) terminée.`);
     }
 });
+
+
+// NOUVEAU: PUT /api/commandes/:id (Mettre à jour l'état de la commande de l'utilisateur)
+app.put('/api/commandes/:id', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const commandeId = req.params.id;
+    // On récupère SEULEMENT l'état (le champ qui change)
+    const { etat } = req.body; 
+
+    if (!etat) {
+        return res.status(400).json({ error: 'Le champ "etat" est requis pour la mise à jour.' });
+    }
+    const normalizedEtat = normalizeStatus(etat); // Utilise la fonction de normalisation globale
+
+    try {
+        // CRITIQUE: Mise à jour sécurisée, vérifie l'ID de la commande ET l'ID de l'utilisateur
+        const sql = `UPDATE commandes SET etat = $1 WHERE id = $2 AND user_id = $3 RETURNING id, etat`;
+
+        const { rowCount, rows } = await db.query(sql, [
+            normalizedEtat,
+            commandeId,
+            userId
+        ]);
+
+        if (rowCount === 0) {
+            return res.status(404).json({ message: "Commande non trouvée ou non autorisée" });
+        }
+
+        console.log(`PUT /api/commandes/${commandeId}: Statut mis à jour à ${normalizedEtat}.`);
+        res.json({ id: commandeId, etat: rows[0].etat });
+
+    } catch (err) {
+        console.error(`Erreur DB PUT /api/commandes/${commandeId}:`, err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// ... (Laissez le reste des routes (POST/PUT/DELETE /api/transactions, etc.) tel quel)
 
 
 app.post('/api/transactions', authenticateToken, async (req, res) => {
@@ -1398,31 +1431,21 @@ app.post('/api/retours', authenticateToken, async (req, res) => {
 });
 
 
-// --- ROUTE COMMANDES --- (Conversion complète)
-
-// GET /api/commandes (Récupérer les commandes)
-// GET /api/commandes (Récupérer les commandes)
-// CORRIGÉ : Suppression de l'indentation (espaces invisibles) avant la requête
-// GET /api/commandes (Récupérer les commandes)
-// CORRIGÉ : Suppression de l'indentation (espaces invisibles) avant la requête
 app.get('/api/commandes', authenticateToken, async (req, res) => {
-    const userId = req.user.id;
+    // 🚨 CORRECTION CRITIQUE: Assurer que seule les commandes de l'utilisateur sont retournées
+    const userId = req.user.id; // L'ID est extrait du token JWT (unique à l'utilisateur)
+    
+    try {
+        // NOUVEAU: Ajout de 'WHERE user_id = $1' pour garantir l'isolation des données
+        const sql = `SELECT * FROM commandes WHERE user_id = $1 ORDER BY date_commande DESC`;
+        const { rows } = await db.query(sql, [userId]);
 
-    try {
-        // CORRECTION : La requête commence à la ligne 1, sans espaces avant
-        const { rows } = await db.query(
-`SELECT * FROM commandes 
-WHERE user_id = $1 
-ORDER BY date_commande DESC`, 
-            [userId]
-        );
-        
-        res.json(rows || []);
-
-    } catch (err) {
-        console.error("Erreur DB GET /api/commandes:", err.message);
-        res.status(500).json({ error: "Erreur serveur lors de la récupération des commandes." });
-    }
+        console.log(`GET /api/commandes: ${rows.length} commandes trouvées pour User ${userId}.`);
+        res.json(rows);
+    } catch (err) {
+        console.error("Erreur DB GET /api/commandes:", err.message);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // POST /api/commandes (Ajouter une commande)
@@ -1468,7 +1491,7 @@ app.post('/api/commandes', authenticateToken, async (req, res) => {
     }
 });
 
-// DELETE /api/commandes/:id (Supprimer une commande)
+
 app.delete('/api/commandes/:id', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const commandeId = req.params.id;
@@ -1488,8 +1511,42 @@ app.delete('/api/commandes/:id', authenticateToken, async (req, res) => {
 
 
 
-// --- ROUTE DASHBOARD (A adapter pour PostgreSQL) ---
-// index.js (AJOUTER/REMPLACER LA ROUTE DU DASHBOARD)
+// index.js (ROUTE MANQUANTE À AJOUTER APRÈS POST/DELETE /api/commandes)
+
+// PUT /api/commandes/:id (Mettre à jour l'état de la commande)
+app.put('/api/commandes/:id', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const commandeId = req.params.id;
+    // On s'assure de récupérer SEULEMENT l'état ou les champs nécessaires
+    const { etat } = req.body; 
+
+    if (!etat) {
+        return res.status(400).json({ error: 'Le champ "etat" est requis pour la mise à jour.' });
+    }
+    const normalizedEtat = normalizeStatus(etat); // Utilise votre fonction de normalisation
+
+    try {
+        const sql = `UPDATE commandes SET etat = $1 WHERE id = $2 AND user_id = $3 RETURNING id, etat`;
+
+        const { rowCount, rows } = await db.query(sql, [
+            normalizedEtat,
+            commandeId,
+            userId
+        ]);
+
+        if (rowCount === 0) {
+            return res.status(404).json({ message: "Commande non trouvée ou non autorisée" });
+        }
+
+        console.log(`PUT /api/commandes/${commandeId}: Statut mis à jour à ${normalizedEtat}.`);
+        // Le frontend n'a besoin que du statut normalisé pour mettre à jour son état local
+        res.json({ id: commandeId, etat: rows[0].etat });
+
+    } catch (err) {
+        console.error(`Erreur DB PUT /api/commandes/${commandeId}:`, err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // NOUVELLE ROUTE : GET /api/dashboard-data
 app.get('/api/dashboard-data', authenticateToken, async (req, res) => {
