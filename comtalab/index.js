@@ -104,7 +104,17 @@ const articleDetails = {
   'autre': { display: 'Autre', aliases: [], styles: [], prix: {} }
 };
 
-
+function calculateDebtCost(debtType, amount, articlesJson) {
+    // Si c'est Euro, DTF, ou Autre, on prend le montant saisi directement
+    if (debtType === 'euro' || debtType === 'dtf' || debtType === 'autre') {
+        return parseFloat(amount) || 0;
+    }
+    // Si c'est un Article, on utilise la fonction existante parseArticleCost
+    if (debtType === 'article' && articlesJson) {
+        return parseArticleCost(articlesJson); 
+    }
+    return 0;
+}
 
 // index.js (REMPLACE CETTE FONCTION EN ENTIER)
 function parseArticleCost(articlesJsonText) {
@@ -527,7 +537,20 @@ try {
                     );
                 `, 'utilisateurs');
 
-                // --- Logique d'insertion de l'admin par défaut (PostgreSQL) ---
+                await createTable(`
+    CREATE TABLE IF NOT EXISTS dettes (
+        id SERIAL PRIMARY KEY,
+        contact_name TEXT NOT NULL,
+        debt_type TEXT NOT NULL CHECK(debt_type IN ('article', 'euro', 'dtf', 'autre')),
+        montant REAL DEFAULT 0, /* Montant pour euro/dtf/autre, ou coût estimé pour article */
+        article_json TEXT NULL, /* Détails des articles (pour les dettes de stock) */
+        is_paid BOOLEAN NOT NULL DEFAULT FALSE,
+        date_owed TEXT NOT NULL,
+        user_id INTEGER NOT NULL
+    );
+`, 'dettes');
+await db.query(`CREATE INDEX IF NOT EXISTS idx_dettes_user_contact ON dettes (user_id, contact_name);`);
+
                 const { rows: userCount } = await db.query(`SELECT COUNT(id) AS count FROM utilisateurs`);
                 if (parseInt(userCount[0].count) === 0) {
                     const defaultPassword = 'password';
@@ -1869,4 +1892,156 @@ app.get('/api/financial-summary', authenticateToken, async (req, res) => {
     console.error("Erreur DB GET /api/financial-summary:", err.message, err.stack);
     res.status(500).json({ error: `Erreur serveur lors de la récupération du résumé : ${err.message}` });
   }
+});
+
+// comtalab/index.js (À insérer après la dernière route /api/stock ou /api/retours)
+
+// --- API DETTES & FOURNISSEURS ---
+
+// POST /api/dettes (Ajouter une nouvelle dette)
+app.post('/api/dettes', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const { contact_name, debt_type, amount, article_json, date_owed } = req.body;
+    
+    if (!contact_name || !debt_type || !date_owed) {
+        return res.status(400).json({ error: 'Nom du contact, type de dette et date sont requis.' });
+    }
+
+    try {
+        // Calculer le montant final (réel ou estimé)
+        const finalMontant = calculateDebtCost(debt_type, amount, article_json);
+        
+        const sql = `
+            INSERT INTO dettes (user_id, contact_name, debt_type, montant, article_json, date_owed) 
+            VALUES ($1, $2, $3, $4, $5, $6) 
+            RETURNING id, montant, debt_type, contact_name`;
+
+        const { rows } = await db.query(sql, [
+            userId,
+            contact_name,
+            debt_type,
+            finalMontant,
+            article_json || null,
+            date_owed
+        ]);
+
+        res.status(201).json({ 
+            id: rows[0].id, 
+            contact_name: rows[0].contact_name, 
+            debt_type: rows[0].debt_type, 
+            montant: rows[0].montant,
+            is_paid: false 
+        });
+
+    } catch (err) {
+        console.error("Erreur DB POST /api/dettes:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// GET /api/dettes (Récupérer les dettes)
+app.get('/api/dettes', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const { status = 'unpaid' } = req.query; // 'unpaid', 'paid', ou 'all'
+    
+    let whereClause = `WHERE user_id = $1`;
+    const params = [userId];
+
+    if (status === 'unpaid') {
+        whereClause += ` AND is_paid = FALSE`;
+    } else if (status === 'paid') {
+        whereClause += ` AND is_paid = TRUE`;
+    }
+    
+    try {
+        const sql = `SELECT * FROM dettes ${whereClause} ORDER BY date_owed DESC`;
+        const { rows } = await db.query(sql, params);
+        res.json(rows);
+
+    } catch (err) {
+        console.error("Erreur DB GET /api/dettes:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// GET /api/dettes/summary (Résumé par contact)
+app.get('/api/dettes/summary', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+
+    try {
+        const sql = `
+            SELECT 
+                contact_name,
+                COUNT(id) AS total_debts,
+                SUM(CASE WHEN is_paid = FALSE THEN montant ELSE 0 END) AS total_unpaid_amount,
+                SUM(montant) AS total_amount
+            FROM dettes 
+            WHERE user_id = $1
+            GROUP BY contact_name
+            ORDER BY total_unpaid_amount DESC
+        `;
+        const { rows } = await db.query(sql, [userId]);
+        
+        // Mettre en forme les résultats (assurer que les nombres sont en float)
+        const summary = rows.map(row => ({
+            contact_name: row.contact_name,
+            total_debts: parseInt(row.total_debts, 10),
+            total_unpaid_amount: parseFloat(row.total_unpaid_amount) || 0,
+            total_amount: parseFloat(row.total_amount) || 0
+        }));
+
+        res.json(summary);
+
+    } catch (err) {
+        console.error("Erreur DB GET /api/dettes/summary:", err.message);
+        res.status(500).json({ error: "Erreur serveur lors du calcul du résumé." });
+    }
+});
+
+
+// PUT /api/dettes/:id/pay (Marquer une dette comme payée)
+app.put('/api/dettes/:id/pay', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const debtId = req.params.id;
+    
+    try {
+        const sql = `
+            UPDATE dettes 
+            SET is_paid = TRUE 
+            WHERE id = $1 AND user_id = $2
+            RETURNING id, contact_name
+        `;
+        const { rowCount } = await db.query(sql, [debtId, userId]);
+
+        if (rowCount === 0) {
+            return res.status(404).json({ message: "Dette non trouvée ou non autorisée." });
+        }
+        res.json({ message: "Dette marquée comme payée.", id: debtId });
+
+    } catch (err) {
+        console.error("Erreur DB PUT /api/dettes/pay:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// DELETE /api/dettes/:id (Supprimer une dette)
+app.delete('/api/dettes/:id', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const debtId = req.params.id;
+    
+    try {
+        const { rowCount } = await db.query(`DELETE FROM dettes WHERE id = $1 AND user_id = $2`, [debtId, userId]);
+
+        if (rowCount === 0) {
+            return res.status(404).json({ message: "Dette non trouvée ou non autorisée" });
+        }
+        res.status(200).json({ message: "Dette supprimée." });
+
+    } catch (err) {
+        console.error(`Erreur DB DELETE /api/dettes/${debtId}:`, err.message);
+        res.status(500).json({ error: err.message });
+    }
 });

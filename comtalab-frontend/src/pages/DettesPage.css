@@ -1,0 +1,442 @@
+/* Styles généraux de la page des dettes */
+.dettes-page-content {
+    padding: 25px; /* Légèrement plus de padding */
+    max-width: 1200px; /* Limite la largeur pour une meilleure lisibilité */
+    margin: 0 auto;
+    font-family: 'Roboto', sans-serif; /* Police plus moderne */
+    color: #343a40; /* Couleur de texte plus foncée */
+    background-color: #f8f9fa; /* Fond de page léger */
+}
+
+/* Style pour le formulaire d'ajout de dette */
+.debt-form {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0; /* Bordure plus douce */
+    border-radius: 10px; /* Rayon de bordure plus prononcé */
+    padding: 20px;
+    margin-bottom: 30px; /* Plus d'espace sous le formulaire */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Ombre plus distincte */
+}
+
+/* Conteneur pour aligner les champs du formulaire sur une ligne */
+.form-fields-inline {
+    display: flex;
+    flex-wrap: nowrap; /* EMPÊCHE LE RETOUR À LA LIGNE par défaut */
+    gap: 15px; /* Espace augmenté entre les éléments */
+    align-items: flex-end;
+    justify-content: flex-start;
+    overflow-x: auto; /* Permet le défilement horizontal si ça déborde VRAIMENT */
+    padding-bottom: 5px; /* Pour éviter que le scrollbar ne cache des éléments */
+}
+
+/* Style de base pour chaque contrôle de formulaire (label + input/select) */
+.form-control-debt {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+    flex-shrink: 0; /* Empêche les éléments de rétrécir trop */
+    flex-grow: 0; /* Ne grandit pas automatiquement */
+}
+
+.form-control-debt label {
+    font-weight: 600; /* Plus de gras */
+    margin-bottom: 6px;
+    white-space: nowrap;
+    font-size: 0.95em; /* Légèrement plus grand */
+    color: #495057; /* Couleur de label plus foncée */
+}
+
+.form-control-debt input[type="date"],
+.form-control-debt input[type="number"],
+.form-control-debt input[type="text"],
+.form-control-debt select {
+    padding: 10px 12px; /* Plus de padding */
+    border: 1px solid #ced4da; /* Bordure plus neutre */
+    border-radius: 6px; /* Rayon de bordure doux */
+    font-size: 1em; /* Taille de police standard */
+    /* width: 100%; sera géré par min/max-width */
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease; /* Transitions pour le focus */
+}
+
+.form-control-debt input:focus,
+.form-control-debt select:focus {
+    border-color: #80bdff; /* Couleur de focus bleue */
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); /* Ombre de focus */
+}
+
+/* Ajustements spécifiques pour les largeurs fixes des champs */
+.form-control-debt.date-input {
+    width: 170px; /* Largeur fixe pour la date */
+}
+
+.form-control-debt.quantity-input {
+    width: 80px; /* Largeur fixe pour la quantité */
+}
+
+.form-control-debt.amount-input {
+    width: 150px; /* Largeur fixe pour le montant */
+}
+
+.form-control-debt.article-select {
+    width: 170px; /* Largeur fixe pour l'article */
+}
+
+.form-control-debt.style-input {
+    width: 170px; /* Largeur fixe pour le style */
+}
+
+/* Le champ de commentaire prend l'espace restant s'il y en a */
+.form-control-debt.comment-input {
+    flex-grow: 1; /* Peut grandir pour remplir l'espace */
+    min-width: 180px; /* Mais avec une largeur minimale */
+}
+
+/* Le type de dette (select) */
+.form-control-debt:has(select#debtType) { /* Sélectionne le parent si l'ID est là */
+    width: 120px; /* Largeur fixe pour le type de dette */
+}
+
+
+/* Bouton d'enregistrement du formulaire */
+.btn-submit-debt {
+    padding: 10px 20px; /* Plus de padding */
+    background-color: #28a745; /* Vert vibrant */
+    color: white;
+    border: none;
+    border-radius: 6px; /* Rayon de bordure doux */
+    cursor: pointer;
+    font-size: 1.05em; /* Légèrement plus grand */
+    font-weight: 600;
+    align-self: flex-end;
+    margin-left: 15px; /* Espace augmenté */
+    min-width: 110px;
+    flex-shrink: 0; /* Ne rétrécit pas */
+    transition: background-color 0.2s ease, transform 0.1s ease; /* Transition pour le hover */
+}
+
+.btn-submit-debt:hover {
+    background-color: #218838;
+    transform: translateY(-1px); /* Léger effet de soulèvement */
+}
+
+.btn-submit-debt:active {
+    transform: translateY(0); /* Retour à la position normale */
+}
+
+/* Message d'erreur du formulaire */
+.error-message {
+    color: #dc3545; /* Rouge vif */
+    background-color: #fce8e6; /* Fond rouge pâle */
+    border: 1px solid #f5c2c7; /* Bordure rouge */
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+/* Séparateur */
+.stock-divider {
+    border: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0));
+    margin: 30px 0; /* Plus de marge */
+}
+
+/* En-tête de la liste des dettes */
+.list-header-dettes {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 10px 0;
+    border-bottom: 1px solid #e9ecef; /* Bordure plus légère */
+}
+
+.list-header-dettes h2 {
+    margin: 0;
+    font-size: 1.8em; /* Plus grand */
+    color: #343a40;
+    font-weight: 700;
+}
+
+.list-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px; /* Espace augmenté */
+}
+
+.grand-total {
+    font-size: 1.2em; /* Plus grand */
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.grand-total .amount-due {
+    color: #dc3545; /* Couleur rouge pour le total dû */
+    font-weight: 700; /* Très gras */
+}
+
+/* Bouton "Payer Tout" */
+.btn-pay-all {
+    background-color: #007bff; /* Bleu primaire */
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 600;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-pay-all:hover:not(:disabled) {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+}
+
+.btn-pay-all:active {
+    transform: translateY(0);
+}
+
+.btn-pay-all:disabled {
+    background-color: #c0c0c0; /* Gris plus doux */
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Liste des dettes individuelles */
+.dettes-list {
+    list-style: none;
+    padding: 0;
+}
+
+.debt-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ffffff;
+    border: 1px solid #e9ecef; /* Bordure légère */
+    border-radius: 10px;
+    padding: 15px 20px; /* Plus de padding */
+    margin-bottom: 12px; /* Plus d'espace entre les éléments */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); /* Ombre douce */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.debt-item:hover {
+    transform: translateY(-2px); /* Léger effet de soulèvement au survol */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.debt-details {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    margin-right: 20px; /* Espace augmenté */
+}
+
+.debt-type-display {
+    font-size: 1em;
+    color: #495057;
+    margin-bottom: 4px;
+}
+
+.debt-type-display strong {
+    font-weight: 700;
+    color: #343a40;
+}
+
+.debt-comment-display,
+.debt-article-details-display {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-top: 2px;
+    line-height: 1.4;
+}
+
+.debt-amount-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px; /* Espace augmenté */
+}
+
+.debt-amount-due {
+    font-weight: 700; /* Très gras */
+    color: #dc3545; /* Rouge vif pour le montant dû */
+    white-space: nowrap;
+    font-size: 1.2em; /* Plus grand */
+}
+
+.debt-date {
+    font-size: 0.85em; /* Légèrement plus grand */
+    color: #888;
+    white-space: nowrap;
+}
+
+.debt-actions {
+    display: flex;
+    gap: 8px; /* Espace augmenté entre les boutons */
+}
+
+.debt-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.25em; /* Icônes plus grandes */
+    padding: 8px; /* Zone de clic plus grande */
+    transition: color 0.2s ease, transform 0.1s ease;
+    display: flex; /* Centrer l'icône */
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%; /* Boutons ronds */
+}
+
+.btn-mark-paid {
+    color: #28a745; /* Vert pour marquer payé */
+}
+
+.btn-mark-paid:hover {
+    color: #218838;
+    background-color: #e6ffe6; /* Fond léger au survol */
+    transform: scale(1.1);
+}
+
+.btn-delete-debt {
+    color: #dc3545; /* Rouge pour supprimer */
+}
+
+.btn-delete-debt:hover {
+    color: #c82333;
+    background-color: #ffe6e6; /* Fond léger au survol */
+    transform: scale(1.1);
+}
+
+/* Message si la liste est vide */
+.empty-list-message {
+    text-align: center;
+    color: #6c757d;
+    padding: 30px; /* Plus de padding */
+    background-color: #e9ecef;
+    border-radius: 10px;
+    margin-top: 30px;
+    font-size: 1.2em; /* Plus grand */
+    font-weight: 500;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Responsive adjustments */
+/* Sur les écrans plus petits, permettre aux éléments de s'enrouler */
+@media (max-width: 992px) { /* Nouvelle breakpoint pour la mise en page du formulaire */
+    .form-fields-inline {
+        flex-wrap: wrap; /* Re-activer le retour à la ligne sur les petits écrans */
+        overflow-x: hidden; /* Désactiver le scroll horizontal si le wrap est actif */
+        padding-bottom: 0;
+    }
+
+    .form-control-debt,
+    .btn-submit-debt {
+        width: 100%; /* Les champs prennent toute la largeur disponible */
+        flex-grow: 1; /* Permet aux champs de grandir si nécessaire */
+        flex-shrink: 1; /* Permet aux champs de rétrécir si nécessaire */
+        margin-left: 0;
+    }
+
+    .form-control-debt.quantity-input,
+    .form-control-debt.date-input,
+    .form-control-debt.amount-input,
+    .form-control-debt.article-select,
+    .form-control-debt.style-input,
+    .form-control-debt:has(select#debtType) {
+        width: 100%; /* S'assurer qu'ils prennent 100% de la largeur du parent flex-item */
+        max-width: none; /* Supprimer toute limite de largeur */
+    }
+
+    .btn-submit-debt {
+        min-width: unset;
+    }
+    
+    .list-header-dettes {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .list-header-dettes h2 {
+        font-size: 1.6em;
+    }
+
+    .list-actions {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 5px;
+        flex-wrap: wrap;
+    }
+
+    .grand-total {
+        font-size: 1.1em;
+    }
+
+    .btn-pay-all {
+        flex-grow: 1;
+    }
+
+    .debt-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+        padding: 15px;
+    }
+
+    .debt-details {
+        margin-right: 0;
+        width: 100%;
+    }
+
+    .debt-amount-actions {
+        width: 100%;
+        justify-content: space-between;
+        margin-left: 0;
+        margin-top: 10px;
+        border-top: 1px dashed #e9ecef;
+        padding-top: 15px;
+    }
+
+    .debt-amount-due {
+        font-size: 1.1em;
+    }
+
+    .debt-actions {
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dettes-page-content {
+        padding: 15px;
+    }
+
+    .debt-form {
+        padding: 15px;
+    }
+
+    .list-header-dettes h2 {
+        font-size: 1.4em;
+    }
+
+    .grand-total {
+        font-size: 1em;
+    }
+
+    .btn-pay-all {
+        padding: 8px 12px;
+        font-size: 0.9em;
+    }
+
+    .debt-item {
+        padding: 10px;
+    }
+}
