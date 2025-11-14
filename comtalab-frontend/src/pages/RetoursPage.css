@@ -10,30 +10,32 @@
 
 /* Style de la section Article (réutilise .article-section) */
 .article-section {
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background-color: var(--card-background);
-  box-shadow: var(--shadow);
-  padding: 0;
-  margin-bottom: 25px;
-  overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--card-background);
+    box-shadow: var(--shadow);
+    padding: 0;
+    margin-bottom: 25px;
+    overflow: hidden;
 }
 
 /* Titre de la section Article (Hoodie, T-shirt) */
 .article-section-title {
-  color: white;
-  background-color: var(--accent-color);
-  font-size: 1.6rem;
-  font-weight: 700;
-  margin: 0;
-  padding: 10px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  text-transform: uppercase;
+    color: white;
+    background-color: var(--accent-color);
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-transform: uppercase;
 }
 .article-section-title span {
-    font-size: 1rem; font-weight: normal; color: rgba(255, 255, 255, 0.8);
+    font-size: 1rem; 
+    font-weight: normal; 
+    color: rgba(255, 255, 255, 0.8);
     margin-left: 10px;
 }
 
@@ -82,44 +84,68 @@
     margin: 0;
 }
 
+/* 🚨 CACHE L'ANCIENNE STRUCTURE DE LISTE (Somme totale) 🚨 */
 .retour-description-list .description-item {
+    display: none;
+}
+/* FIN CACHE */
+
+
+/* Bouton de suppression de groupe (retiré du JSX, on retire son CSS) */
+.retour-taille-card .btn-delete-group {
+    /* Style du bouton poubelle d'origine */
+    display: none;
+}
+
+
+/* --- NOUVEAUX STYLES POUR LA SUPPRESSION INDIVIDUELLE --- */
+
+/* Conteneur de chaque ligne individuelle de retour */
+.retour-description-list .individual-retour-item {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 5px 0;
     font-size: 0.9rem;
     border-bottom: 1px dotted #e0e0e0;
 }
-.retour-description-list .description-item:last-child {
+.retour-description-list .individual-retour-item:last-child {
     border-bottom: none;
 }
 
-.description-details {
+.individual-details {
     font-weight: 500;
     color: var(--text-color);
+    flex-grow: 1; 
+    padding-right: 10px;
+    word-break: break-word;
 }
-.description-count {
-    font-weight: 600;
-    color: var(--accent-color);
+.individual-details small {
+    font-weight: normal;
+    color: var(--text-light);
+    margin-left: 5px;
 }
 
-/* Bouton de suppression de groupe (réutilisé du stock) */
-.retour-taille-card .btn-delete-group {
-    position: relative; 
-    top: auto; 
-    right: auto;
-    background: none;
-    border: none;
-    color: var(--danger-color);
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 2px;
+/* 🚨 CORRECTION : Le petit bouton de suppression "X" (Discret et Instantané) 🚨 */
+.btn-delete-tiny {
+    background: transparent; /* Fond transparent */
+    color: var(--danger-color); /* Couleur rouge */
+    border: 1px solid transparent; /* Bordure invisible */
+    padding: 0px 4px; /* Très très compact */
+    border-radius: 4px;
+    font-size: 0.7rem; /* Très petit */
+    font-weight: 700;
     line-height: 1;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-    margin-left: auto; /* Pousse à droite */
+    flex-shrink: 0; 
+    opacity: 0.3; /* Rendre TRES discret par défaut */
+    transition: opacity 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 }
-.retour-taille-card .btn-delete-group:hover { opacity: 1; background-color: #ffebeb; border-radius: 4px; }
 
+.btn-delete-tiny:hover {
+    background-color: #ffebeb; /* Fond rouge très léger au survol */
+    border-color: var(--danger-color); /* Bordure rouge au survol */
+    opacity: 1; /* Pleinement visible */
+}
 
 /* --- Responsive --- */
 @media (max-width: 768px) {

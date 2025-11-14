@@ -1321,9 +1321,12 @@ app.put('/api/sheet-data/update-status', authenticateToken, async (req, res) => 
 
 // --- ROUTE RETOURS --- (Conversion complète)
 
+// comtalab/index.js (Remplacez la fonction DELETE GROUPE DE RETOURS)
+
 // 1. DELETE GROUPE DE RETOURS (Par Modèle/Taille)
 app.delete('/api/retours/group', authenticateToken, async (req, res) => {
     const userId = req.user.id;
+    // Les paramètres proviennent de req.query (frontend)
     const { nom, style, taille, description } = req.query;
 
     if (!nom || !description) {
@@ -1349,6 +1352,7 @@ app.delete('/api/retours/group', authenticateToken, async (req, res) => {
             } else {
                 sqlParts.push(`"${field}" = $${paramIndex}`);
                 params.push(cleanedValue);
+                paramIndex++; // 🚨 CORRECTION : Incrémente l'index pour le paramètre suivant
             }
         };
 
@@ -1358,6 +1362,7 @@ app.delete('/api/retours/group', authenticateToken, async (req, res) => {
 
         const sql = `DELETE FROM stock_retours WHERE ` + sqlParts.join(' AND ') + ` RETURNING id`;
 
+        // Execute la suppression
         const { rowCount } = await db.query(sql, params);
 
         if (rowCount === 0) {
