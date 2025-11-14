@@ -541,7 +541,6 @@ try {
                 await createTable(`
     CREATE TABLE IF NOT EXISTS dettes (
         id SERIAL PRIMARY KEY,
-        contact_name TEXT NOT NULL,
         debt_type TEXT NOT NULL CHECK(debt_type IN ('article', 'euro', 'dtf', 'autre')),
         montant REAL DEFAULT 0, /* Montant pour euro/dtf/autre, ou coût estimé pour article */
         article_json TEXT NULL, /* Détails des articles (pour les dettes de stock) */
