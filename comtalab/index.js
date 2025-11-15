@@ -1966,23 +1966,24 @@ app.get('/api/financial-summary', authenticateToken, async (req, res) => {
   }
 });
 
-// comtalab/index.js (À insérer après la dernière route /api/stock ou /api/retours)
+// comtalab/index.js (Route POST /api/dettes)
 
 app.post('/api/dettes', authenticateToken, async (req, res) => {
     const userId = req.user.id;
-    // CORRECTION CRITIQUE: Assurez-vous que l'extraction du body correspond à ce que le front envoie.
-    // Nous supposons que le frontend envoie 'commentaire' ou 'comment'.
-    // J'utilise 'commentaire' ici pour l'aligner avec le champ SQL.
-    const { contact_name, debt_type, amount, article_json, date_owed, commentaire } = req.body; 
+    // On extrait les deux orthographes possibles au cas où
+    const { contact_name, debt_type, amount, article_json, date_owed, commentaire, comment } = req.body; 
     
     if (!contact_name || !debt_type || !date_owed) {
         return res.status(400).json({ error: 'Nom du contact, type de dette et date sont requis.' });
     }
 
     try {
+        // Détermination du commentaire final à insérer : priorité à 'commentaire', sinon 'comment'.
+        const finalComment = commentaire || comment;
+
         const finalMontant = calculateDebtCost(debt_type, amount, article_json);
         
-        // REQUÊTE SQL: Utilise le nom de colonne 'commentaire'
+        // REQUÊTE SQL: La colonne dans la DB est 'commentaire' (selon les logs d'erreur)
         const sql = `
             INSERT INTO dettes (user_id, contact_name, debt_type, montant, article_json, date_owed, commentaire) 
             VALUES ($1, $2, $3, $4, $5, $6, $7) 
@@ -1995,7 +1996,7 @@ app.post('/api/dettes', authenticateToken, async (req, res) => {
             finalMontant,                    // $4
             article_json || null,            // $5
             date_owed,                       // $6
-            commentaire || null              // $7 <--- Utilise la variable 'commentaire' extraite
+            finalComment || null             // $7 <--- Utilise la variable nettoyée finalComment
         ]);
 
         res.status(201).json({ 
@@ -2005,12 +2006,11 @@ app.post('/api/dettes', authenticateToken, async (req, res) => {
             montant: rows[0].montant,
             date_owed: rows[0].date_owed,
             article_json: rows[0].article_json,
-            commentaire: rows[0].commentaire, // ✅ Utilise le champ retourné par la DB
+            commentaire: rows[0].commentaire, // ✅ Renvoie le champ exact de la DB pour le frontend
             is_paid: false 
         });
 
     } catch (err) {
-        // L'erreur SQL "column "commentaire" already exists" ne devrait plus se produire si elle a été exécutée par la DB elle-même
         console.error("Erreur DB POST /api/dettes:", err.message);
         res.status(500).json({ error: err.message });
     }
