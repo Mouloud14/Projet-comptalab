@@ -715,7 +715,18 @@ app.get('/api/transactions', authenticateToken, async (req, res) => {
 
         // 2. Calcul ou récupération du solde total
         // Cette requête simple calcule la somme de tous les montants
-        const soldeQuery = 'SELECT COALESCE(SUM(montant), 0) AS solde FROM transactions WHERE user_id = $1;';
+        const soldeQuery = `
+    SELECT 
+        COALESCE(SUM(
+            CASE 
+                WHEN type = 'revenu' THEN montant 
+                WHEN type = 'depense' THEN -montant 
+                ELSE 0 
+            END
+        ), 0) AS solde
+    FROM transactions
+    WHERE user_id = $1;
+`;
         const soldeResult = await db.query(soldeQuery, [userId]);
         const soldeTotal = soldeResult.rows[0].solde;
 
