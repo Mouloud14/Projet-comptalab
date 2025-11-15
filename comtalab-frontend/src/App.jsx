@@ -1,11 +1,8 @@
-// src/App.jsx (Version finale corrigée avec la page Dettes)
-
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
 
 // Import des icônes Font Awesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// AJOUT de faHandshake pour les dettes
 import { faHome, faExchangeAlt, faBox, faClipboardList, faUndo, faSignOutAlt, faHandshake } from '@fortawesome/free-solid-svg-icons';
 
 // Imports des Pages
@@ -14,7 +11,6 @@ import HomePage from './pages/HomePage';
 import StockPage from './pages/StockPage';
 import CommandesPage from './pages/CommandesPage';
 import RetoursPage from './pages/RetoursPage';
-// NOUVEAU: Import de la nouvelle page
 import DettesPage from './pages/DettesPage';
 
 // Imports des Composants
@@ -37,7 +33,6 @@ function Sidebar({ handleLogout }) {
         <li> <Link to="/stock"> <FontAwesomeIcon icon={faBox} className="sidebar-icon" /> <span className="sidebar-text">Stock</span> </Link> </li>
         <li> <Link to="/commandes"> <FontAwesomeIcon icon={faClipboardList} className="sidebar-icon" /> <span className="sidebar-text">Commandes</span> </Link> </li>
         <li> <Link to="/retours"> <FontAwesomeIcon icon={faUndo} className="sidebar-icon" /> <span className="sidebar-text">Retours</span> </Link> </li>
-        {/* NOUVEAU LIEN Dettes */}
         <li> <Link to="/dettes"> <FontAwesomeIcon icon={faHandshake} className="sidebar-icon" /> <span className="sidebar-text">Dettes</span> </Link> </li>
       </ul>
       <button onClick={handleLogout} className="logout-button-sidebar">
@@ -53,6 +48,7 @@ function Sidebar({ handleLogout }) {
 function App() {
   // --- États Globaux ---
   const [transactions, setTransactions] = useState([]);
+  const [soldeTotal, setSoldeTotal] = useState(0); // 🚨 NOUVEL ÉTAT
   const [transactionToEdit, setTransactionToEdit] = useState(null);
   const today = new Date().toISOString().slice(0, 10);
   const [selectedDate, setSelectedDate] = useState(today);
@@ -66,26 +62,37 @@ function App() {
     console.log("Déclenchement du rafraîchissement des transactions...");
     if (!token) return;
     try {
-      // CORRECTION CRITIQUE APPLIQUÉE ICI : /api/transactions
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/transactions`, {
         cache: 'no-store',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
         const data = await response.json();
-        setTransactions(Array.isArray(data) ? data : []);
-        console.log(`${Array.isArray(data) ? data.length : 0} transactions chargées.`);
+        
+        // ✅ CORRECTION CRITIQUE ICI : lecture de la nouvelle structure {transactions, solde}
+        if (data && Array.isArray(data.transactions)) {
+          setTransactions(data.transactions);
+          setSoldeTotal(data.solde || 0); // Mise à jour du solde
+          console.log(`${data.transactions.length} transactions chargées.`);
+        } else {
+          setTransactions([]);
+          setSoldeTotal(0);
+          console.error("Erreur de format de données de transactions reçues.");
+        }
+        
       } else if (response.status === 401 || response.status === 403) {
         handleLogout();
       } else { 
         console.error("Erreur serveur lors de la récupération des transactions:", response.status);
         setTransactions([]); 
+        setSoldeTotal(0);
       }
     } catch (error) { 
       console.error("Erreur réseau lors du rafraîchissement:", error);
       setTransactions([]);
+      setSoldeTotal(0);
     }
-  }, [token]); // Dépendance à token pour recréer si l'utilisateur change
+  }, [token]);
 
   const runBackgroundSync = async () => {
     if (!token) return;
@@ -115,13 +122,14 @@ function App() {
       syncTimer = setInterval(runBackgroundSync, 120000);
     } else {
       setTransactions([]);
+      setSoldeTotal(0); // Réinitialiser le solde
     }
     return () => {
       if (syncTimer) {
         clearInterval(syncTimer);
       }
     };
-  }, [token, refreshTransactions]); // Ajout de refreshTransactions aux dépendances pour useCallback
+  }, [token, refreshTransactions]);
 
   const handleLogin = (userObject, receivedToken) => {
     setCurrentUser(userObject);
@@ -135,6 +143,7 @@ function App() {
     setToken(null);
     setCurrentUser(null);
     setTransactions([]);
+    setSoldeTotal(0); // Réinitialiser le solde
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
@@ -170,9 +179,7 @@ function App() {
 
   // --- Calculs ---
   const filteredTransactions = Array.isArray(transactions) ? transactions.filter(tx => tx.date === selectedDate) : [];
-  const totalRevenusGlobal = Array.isArray(transactions) ? transactions.filter(tx => tx.type === 'revenu').reduce((acc, tx) => acc + tx.montant, 0) : 0;
-  const totalDepensesGlobal = Array.isArray(transactions) ? transactions.filter(tx => tx.type === 'depense').reduce((acc, tx) => acc + tx.montant, 0) : 0;
-  const soldeActuel = totalRevenusGlobal - totalDepensesGlobal;
+  // soldeActuel est remplacé par soldeTotal provenant de l'API
   // --- Fin Calculs ---
 
 
@@ -209,6 +216,7 @@ function App() {
                       selectedDate={selectedDate} 
                       onDateChange={setSelectedDate} 
                       totalDepensesJour={filteredTransactions.filter(tx => tx.type === 'depense').reduce((acc, tx) => acc + tx.montant, 0)}
+                      soldeTotal={soldeTotal} // 🚨 NOUVEAU PROP PASSÉ
                     /> 
                   </div>
                 </div>
@@ -234,7 +242,7 @@ function App() {
                 <div className="app-container home-page-container">
                   <HomePage
                     username={currentUser?.username}
-                    currentBalance={soldeActuel}
+                    currentBalance={soldeTotal} // Utilise le solde fourni par l'API
                     token={token}
                     transactionsDuJour={filteredTransactions}
                   />
@@ -245,7 +253,7 @@ function App() {
         }
       />
 
-      {/* --- Route /stock --- */}
+      {/* --- Autres routes (stock, commandes, retours, dettes) inchangées --- */}
       <Route
         path="/stock"
         element={
@@ -258,7 +266,6 @@ function App() {
         }
       />
 
-      {/* --- Route /commandes --- */}
       <Route
         path="/commandes"
         element={
@@ -273,7 +280,6 @@ function App() {
         }
       />
 
-      {/* --- Route /retours --- */}
       <Route
         path="/retours"
         element={
@@ -288,7 +294,6 @@ function App() {
         }
       />
       
-      {/* NOUVELLE ROUTE : /dettes */}
       <Route
         path="/dettes"
         element={
