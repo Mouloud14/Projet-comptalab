@@ -2,16 +2,55 @@
 
 .list-header {
   display: flex;
-  justify-content: space-between;
+  /* 🚨 MODIFICATION : Utilise space-between et align-items: center */
+  justify-content: space-between; 
   align-items: center;
   margin-bottom: 15px;
+  /* 🚨 OPTIONNEL : Pour le rendre fixe/sticky en haut (décommentez si nécessaire) */
+  /* position: sticky;
+  top: 0; 
+  background-color: var(--background-color-main); 
+  z-index: 10; */
 }
 
 .list-title {
   text-align: left;
   color: var(--text-light);
   margin: 0;
+  /* 🚨 Ajoute une marge pour l'espace */
+  margin-right: 20px; 
 }
+
+/* 🚨 NOUVELLE CLASSE POUR LE SOLDE TOTAL 🚨 */
+.solde-fixe {
+  /* Aligner les éléments à l'intérieur verticalement */
+  display: flex; 
+  flex-direction: column;
+  text-align: right;
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-weight: 600;
+  /* Mettre l'accent sur le bloc */
+  background-color: var(--background-color-secondary); 
+  box-shadow: var(--shadow);
+}
+
+.solde-fixe .solde-label {
+    font-size: 0.8em;
+    font-weight: normal;
+    color: var(--text-muted);
+}
+
+.solde-fixe.revenu .summary-value {
+  /* Solde positif/neutre */
+  color: var(--accent-color); 
+}
+
+.solde-fixe.depense .summary-value {
+  /* Solde négatif */
+  color: var(--danger-color); 
+}
+/* FIN DES NOUVEAUX STYLES */
 
 .date-input-discrete {
   border: 1px solid var(--border-color);
@@ -20,6 +59,7 @@
   padding: 5px 8px;
   font-size: 0.9rem;
   color: var(--text-light);
+  /* 🚨 Ajuste la largeur si nécessaire */
   width: 150px;
 }
 
@@ -66,13 +106,23 @@
 .btn-delete { background-color: var(--danger-color); color: white; }
 .btn-delete:hover { background-color: var(--danger-hover); }
 
-/* ... (tous les styles précédents) ... */
-
 /* Style pour les lignes du résumé journalier (Revenus et Dépenses) */
+.list-summary {
+    /* Style du conteneur du résumé journalier (bas de liste) */
+    padding: 15px 0 5px; 
+    border-top: 1px solid var(--border-color);
+    margin-top: 15px;
+}
+.summary-line {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
 .summary-line.day-total {
-  font-size: 1.1rem; /* Taille un peu plus petite que le résumé global */
-  color: var(--text-light); /* Gris clair pour le label */
-  justify-content: space-between; /* Texte à gauche, valeur à droite */
+  font-size: 1.1rem; 
+  color: var(--text-light); 
+  justify-content: space-between; 
 }
 
 
@@ -84,5 +134,4 @@
   color: var(--danger-color);
   font-weight: bold;
 }
-
-/* ... (tous les styles suivants, s'il y en a) ... */
+/* ... (tous les styles suivants) ... */

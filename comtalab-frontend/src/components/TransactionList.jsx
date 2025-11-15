@@ -8,19 +8,37 @@ function TransactionList({
   onEdit,
   selectedDate,
   onDateChange,
-  totalDepensesJour
+  totalDepensesJour,
+  soldeTotal // 🚨 PROP UTILISÉ ICI
 }) {
 
-  const formatArgent = (nombre) => new Intl.NumberFormat('fr-FR').format(nombre.toFixed(0));
+  // Fonction sécurisée contre les undefined/null
+  const formatArgent = (nombre) => {
+    const num = nombre || 0;
+    return new Intl.NumberFormat('fr-FR').format(num.toFixed(0));
+  };
 
   const totalRevenusJour = displayedTransactions
     .filter(tx => tx.type === 'revenu')
-    .reduce((acc, tx) => acc + tx.montant, 0);
+    .reduce((acc, tx) => acc + tx.montant, 0) || 0;
+
+  // Sécuriser et déterminer la classe pour le solde total
+  const finalSolde = soldeTotal || 0;
+  const soldeClass = finalSolde >= 0 ? 'revenu' : 'depense';
 
   return (
     <div>
       <div className="list-header">
         <h2 className="list-title">Liste des Transactions</h2>
+        
+        {/* 🚨 NOUVEL EMPLACEMENT DU SOLDE TOTAL : FIXE DANS LE HEADER 🚨 */}
+        <div className={`solde-fixe ${soldeClass}`}>
+          <span className="solde-label">Solde Total Actuel:</span>
+          <span className="summary-value">
+            {formatArgent(finalSolde)} DZD
+          </span>
+        </div>
+        
         <input
           type="date"
           className="date-input-discrete"
@@ -36,32 +54,27 @@ function TransactionList({
         )}
 
         {displayedTransactions.map(tx => {
-          // --- C'EST ICI LA MODIFICATION ---
-          let mainText = tx.categorie; // Par défaut, on affiche la catégorie
-          let subText = tx.description; // Et le commentaire en dessous
+          let mainText = tx.categorie; 
+          let subText = tx.description; 
 
-          // Si la catégorie est "AUTRES" ET qu'il y a un commentaire
           if (tx.categorie === 'AUTRES' && tx.description) {
-            mainText = tx.description; // Le commentaire devient le texte principal
-            subText = 'AUTRES';        // "AUTRES" devient le texte secondaire
+            mainText = tx.description; 
+            subText = 'AUTRES'; 
           }
-          // --- FIN DE LA MODIFICATION ---
 
           return (
             <li key={tx.id} className={`transaction-item ${tx.type}`}>
 
               <div className="transaction-details">
-                {/* On utilise les variables mainText et subText */}
                 <span className="transaction-description">{mainText}</span>
                 <span className="transaction-meta">
                   {tx.date}
-                  {/* On affiche subText seulement s'il existe */}
                   {subText && ` (${subText})`}
                 </span>
               </div>
 
               <div className="transaction-montant">
-                {tx.type === 'revenu' ? '+' : '-'} {formatArgent(tx.montant)} DZD
+                {tx.type === 'revenu' ? '+' : '-'} {formatArgent(tx.montant || 0)} DZD
               </div>
 
               <div className="transaction-actions">
@@ -74,6 +87,7 @@ function TransactionList({
         })}
       </ul>
 
+      {/* Reste du résumé journalier (SANS le solde total) */}
       <div className="list-summary">
         <div className="summary-line day-total">
           <span>Revenus (Jour):</span>
@@ -84,7 +98,7 @@ function TransactionList({
         <div className="summary-line day-total">
           <span>Dépenses (Jour):</span>
           <span className="summary-value depense">
-            {formatArgent(totalDepensesJour)} DZD
+            {formatArgent(totalDepensesJour || 0)} DZD
           </span>
         </div>
       </div>

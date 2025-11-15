@@ -167,7 +167,6 @@ function parseArticleCost(articlesJsonText) {
 
         // Priorité 2: Si aucun style explicite, l'inférer depuis itemNom
         if (!stylePourPrix) {
-          // console.log(`      [Coût Article] Style non explicite...`); // <-- SUPPRIMÉ
 
           if (articleKey === 'tshirt') {
             if (itemNom.includes('oversize +') || itemNom.includes('oversize plus')) {
@@ -182,7 +181,9 @@ function parseArticleCost(articlesJsonText) {
               stylePourPrix = 'premium'; // 1650
             } else if (itemNom.includes('oversize')) {
               stylePourPrix = 'oversize'; // 1600
-            } else {
+            } else if (itemNom.includes('enfant') || itemNom.includes('kids')) {
+            stylePourPrix = 'enfant'; // 620
+        } else {
               stylePourPrix = details.defaultStyle; // 'standard' (1260)
             }
           } else {
@@ -703,14 +704,27 @@ function authenticateToken(req, res, next) {
 
 app.get('/', (req, res) => { res.send('API Comptalab (PostgreSQL) fonctionne !'); });
 
+// Trouvez votre route GET /api/transactions ou /api/transaction-list
 app.get('/api/transactions', authenticateToken, async (req, res) => {
     const userId = req.user.id;
-    // ...
-    try {
-        const { rows } = await db.query(`SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC`, [userId]);
 
-        console.log(`GET /api/transactions: ${rows ? rows.length : 0} transactions trouvées.`);
-        res.json(rows || []); // ⬅️ Doit renvoyer les données
+    try {
+        // 1. Récupération des transactions
+        const transactionsQuery = 'SELECT id, type, montant, date, description FROM transactions WHERE user_id = $1 ORDER BY date DESC;';
+        const transactions = (await db.query(transactionsQuery, [userId])).rows;
+
+        // 2. Calcul ou récupération du solde total
+        // Cette requête simple calcule la somme de tous les montants
+        const soldeQuery = 'SELECT COALESCE(SUM(montant), 0) AS solde FROM transactions WHERE user_id = $1;';
+        const soldeResult = await db.query(soldeQuery, [userId]);
+        const soldeTotal = soldeResult.rows[0].solde;
+
+        // 3. Renvoi des deux informations
+        res.json({
+            transactions: transactions,
+            solde: parseFloat(soldeTotal) // Convertir en nombre flottant avant d'envoyer
+        });
+
     } catch (err) {
         console.error("Erreur DB GET /api/transactions:", err.message);
         res.status(500).json({ error: err.message });
