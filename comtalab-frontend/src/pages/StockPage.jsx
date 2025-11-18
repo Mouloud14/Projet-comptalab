@@ -4,7 +4,7 @@ import './StockPage.css';
 // --- Structure des données articleDetails ---
 const articleDetails = {
   't shirt': { display: 'T-shirt', styles: ['oversize', 'oversize premium', 'regular premium', 'regular', 'enfant'], prix: { 'oversize': 950, 'oversize premium': 1150,'regular': 790, 'enfant': 620 } },
-  'hoodie': { display: 'Hoodie', styles: ['orma premium', 'enfant', 'standard'], prix: { 'orma premium': 1650, 'enfant': 1300, 'standard': 1260 } },
+  'hoodie': { display: 'Hoodie', styles: ['orma premium','oversize', 'enfant', 'standard'], prix: { 'orma premium': 1650,'oversize':1600, 'enfant': 1300, 'standard': 1260 } },
   'jogging': { display: 'Jogging', styles: ['oversize elastiqué', 'elastiqué normal', 'open leg'], prix: { 'oversize elastiqué': 1180, 'elastiqué normal': 1200, 'open leg': 1200 } },
   'sac a dos': { display: 'Sac à dos', styles: ['standard', 'premium'], prix: { 'standard': 1150, 'premium': 1220 } },
   'autre': { display: 'Autre', styles: [], prix: {} }

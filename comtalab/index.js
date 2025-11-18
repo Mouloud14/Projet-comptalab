@@ -497,7 +497,7 @@ try {
                         style TEXT,
                         description TEXT,
                         user_id INTEGER NOT NULL,
-                        comment TEXT NULL
+                        comment TEXT NULL,
                         date_ajout TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
                     );
                 `, 'stock_retours');
@@ -1532,10 +1532,10 @@ app.get('/api/retours', authenticateToken, async (req, res) => {
 });
 
 
-// 4. POST NOUVEAU RETOUR
 app.post('/api/retours', authenticateToken, async (req, res) => {
     const userId = req.user.id;
-    const { contact_name, debt_type, amount, article_json, date_owed, comment } = req.body;
+    // ✅ CORRECTION : Extraction des champs du corps de la requête
+    const { nom, style, taille, couleur, description } = req.body; 
 
     if (!nom || !description) {
         return res.status(400).json({ error: 'Nom et Description sont requis pour ajouter un retour.' });
