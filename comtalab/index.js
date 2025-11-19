@@ -704,13 +704,13 @@ function authenticateToken(req, res, next) {
 
 app.get('/', (req, res) => { res.send('API Comptalab (PostgreSQL) fonctionne !'); });
 
-// Trouvez votre route GET /api/transactions ou /api/transaction-list
 app.get('/api/transactions', authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
     try {
         // 1. Récupération des transactions
-        const transactionsQuery = 'SELECT id, type, montant, date, description FROM transactions WHERE user_id = $1 ORDER BY date DESC;';
+        // CORRECTION : Ajout de 'categorie' dans le SELECT pour le front-end
+        const transactionsQuery = 'SELECT id, type, montant, date, description, categorie FROM transactions WHERE user_id = $1 ORDER BY date DESC;';
         const transactions = (await db.query(transactionsQuery, [userId])).rows;
 
         // 2. Calcul ou récupération du solde total
@@ -741,8 +741,6 @@ app.get('/api/transactions', authenticateToken, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-
 // index.js
 
 // ... (Laissez le code précédent, y compris app.get('/api/transactions', ...))

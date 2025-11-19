@@ -1,4 +1,4 @@
-// src/components/TransactionList.jsx
+// src/components/TransactionList.jsx (Correction: Priorité à la Catégorie)
 import React from 'react';
 import './TransactionList.css';
 
@@ -9,23 +9,19 @@ function TransactionList({
   selectedDate,
   onDateChange,
   totalDepensesJour,
-  soldeTotal // 🚨 Reçoit le solde total de App.jsx
+  soldeTotal 
 }) {
 
-  // ✅ Correction de la fonction formatArgent pour gérer undefined/null
   const formatArgent = (nombre) => {
     const num = nombre || 0;
-    // On doit s'assurer que num est un nombre pour toFixed
     if (typeof num !== 'number') return new Intl.NumberFormat('fr-FR').format(0);
     return new Intl.NumberFormat('fr-FR').format(num.toFixed(0));
   };
 
-  // ✅ Sécuriser le totalRevenusJour
   const totalRevenusJour = displayedTransactions
     .filter(tx => tx.type === 'revenu')
     .reduce((acc, tx) => acc + (tx.montant || 0), 0) || 0;
 
-  // Sécuriser et déterminer la classe pour le solde total (pour le CSS)
   const finalSolde = soldeTotal || 0;
   const soldeClass = finalSolde >= 0 ? 'revenu' : 'depense';
 
@@ -34,7 +30,6 @@ function TransactionList({
       <div className="list-header">
         <h2 className="list-title">Liste des Transactions</h2>
         
-        {/* 🚨 AFFICHAGE DU SOLDE TOTAL : Placement fixe à droite du titre */}
         <div className={`solde-fixe ${soldeClass}`}>
           <span className="solde-label">Solde Total Actuel:</span>
           <span className="summary-value">
@@ -57,14 +52,15 @@ function TransactionList({
         )}
 
         {displayedTransactions.map(tx => {
-          let mainText = tx.categorie; 
-          let subText = tx.description; 
-
-          // Logique d'affichage si la catégorie est "AUTRES"
-          if (tx.categorie === 'AUTRES' && tx.description) {
-            mainText = tx.description; 
-            subText = 'AUTRES'; 
-          }
+          
+          // Texte principal : Toujours la catégorie sélectionnée (DTF, ZR express, etc.)
+          const mainText = tx.categorie && tx.categorie.trim() !== '' ? tx.categorie : 'Catégorie non spécifiée';
+          
+          // Texte secondaire (Description/Commentaire)
+          const descriptionProvided = tx.description && tx.description.trim() !== '';
+          
+          // Utilise la description comme méta-texte si elle existe
+          const metaText = descriptionProvided ? tx.description : null; 
 
           return (
             <li key={tx.id} className={`transaction-item ${tx.type}`}>
@@ -73,8 +69,8 @@ function TransactionList({
                 <span className="transaction-description">{mainText}</span>
                 <span className="transaction-meta">
                   {tx.date}
-                  {/* On affiche subText seulement s'il existe et est non vide */}
-                  {subText && subText.trim() !== '' && ` (${subText})`} 
+                  {/* Affiche la description en méta si elle est fournie */}
+                  {metaText && ` (${metaText})`} 
                 </span>
               </div>
 
@@ -101,7 +97,6 @@ function TransactionList({
         </div>
         <div className="summary-line day-total">
           <span>Dépenses (Jour):</span>
-          {/* S'assurer que totalDepensesJour est sécurisé (fait par le parent mais on met un || 0) */}
           <span className="summary-value depense">
             {formatArgent(totalDepensesJour || 0)} DZD
           </span>
