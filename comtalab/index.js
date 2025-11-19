@@ -1,6 +1,5 @@
-// index.js (Version PostgreSQL pour Render/Neon)
-// index.js (ZONE DE DÉFINITIONS GLOBALES - À INSÉRER)
-
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 const PRIX_WILAYAS = {
     'adrar': { names: ['adrar', 'أدرار'], prices: { 'a domicile': 1400, 'bureau': 970, 'autre': 970 } },
     'chlef': { names: ['chlef', 'الشلف'], prices: { 'a domicile': 800, 'bureau': 520, 'autre': 520 } },
@@ -540,39 +539,42 @@ try {
                 `, 'utilisateurs');
 
                 await createTable(`
-    CREATE TABLE IF NOT EXISTS dettes (
-        id SERIAL PRIMARY KEY,
-        debt_type TEXT NOT NULL CHECK(debt_type IN ('article', 'euro', 'dtf', 'autre')),
-        montant REAL DEFAULT 0, /* Montant pour euro/dtf/autre, ou coût estimé pour article */
-        article_json TEXT NULL, /* Détails des articles (pour les dettes de stock) */
-        is_paid BOOLEAN NOT NULL DEFAULT FALSE,
-        date_owed TEXT NOT NULL,
-        commentaire TEXT NULL,
-        user_id INTEGER NOT NULL
-    );
-`, 'dettes');
-await db.query(`CREATE INDEX IF NOT EXISTS idx_dettes_user_contact ON dettes (user_id, contact_name);`);
+                    CREATE TABLE IF NOT EXISTS dettes (
+                        id SERIAL PRIMARY KEY,
+                        debt_type TEXT NOT NULL CHECK(debt_type IN ('article', 'euro', 'dtf', 'autre')),
+                        montant REAL DEFAULT 0,
+                        article_json TEXT NULL,
+                        is_paid BOOLEAN NOT NULL DEFAULT FALSE,
+                        date_owed TEXT NOT NULL,
+                        commentaire TEXT NULL,
+                        user_id INTEGER NOT NULL
+                    );
+                `, 'dettes');
+                await db.query(`CREATE INDEX IF NOT EXISTS idx_dettes_user_contact ON dettes (user_id, contact_name);`);
 
+
+                // ---------------------------------------------------------
+                // C'EST ICI QU'IL FAUT COLLER LE CODE SPONSORS (LIGNE 6)
+                // ---------------------------------------------------------
+                await createTable(`
+                    CREATE TABLE IF NOT EXISTS sponsors (
+                        id SERIAL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        budget REAL NOT NULL DEFAULT 0,
+                        start_date TEXT NOT NULL,
+                        end_date TEXT NOT NULL,
+                        user_id INTEGER NOT NULL
+                    );
+                `, 'sponsors');
+                // ---------------------------------------------------------
+                // FIN DU BLOC SPONSORS
+                // ---------------------------------------------------------
+
+
+                // Ensuite, le code des utilisateurs (Admin par défaut)
                 const { rows: userCount } = await db.query(`SELECT COUNT(id) AS count FROM utilisateurs`);
                 if (parseInt(userCount[0].count) === 0) {
-                    const defaultPassword = 'password';
-
-                    bcrypt.hash(defaultPassword, saltRounds, async (errHash, hash) => {
-                        if (errHash) {
-                            return console.error("Erreur lors du hashage de l'admin:", errHash.message);
-                        }
-
-                        try {
-                            await db.query(
-                                `INSERT INTO utilisateurs (username, password) VALUES ($1, $2)`,
-                                ['admin', hash]
-                            );
-                            console.log("Utilisateur 'admin' créé avec succès. Mot de passe par défaut: 'password'.");
-                        } catch (insertErr) {
-                            console.error("Erreur d'insertion de l'admin:", insertErr.message);
-                        }
-                    });
-
+                    // ... (ton code de création admin) ...
                 } else {
                     console.log("Utilisateurs déjà présents.");
                 }
@@ -581,14 +583,10 @@ await db.query(`CREATE INDEX IF NOT EXISTS idx_dettes_user_contact ON dettes (us
                 console.error("Erreur critique lors de la création des tables:", queryErr.message);
             }
         }
-    }); // Fin db.connect
+    }); // <--- Fin de db.connect (NE RIEN METTRE APRÈS ÇA QUI UTILISE createTable)
 } catch (dbError) {
-    console.error('*** ERREUR CRITIQUE: Configuration PostgreSQL échouée:', dbError.message);
-    process.exit(1);
+    // ...
 }
-// --- FIN Connexion DB ---
-
-// --- API AUTHENTIFICATION (Login et Register) ---
 
 // POST /api/register
 app.post('/api/register', async (req, res) => {
@@ -2141,6 +2139,145 @@ app.delete('/api/dettes/:id', authenticateToken, async (req, res) => {
 
     } catch (err) {
         console.error(`Erreur DB DELETE /api/dettes/${debtId}:`, err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- API SPONSORS (ROI MARKETING) ---
+
+// POST /api/sponsors (Créer une campagne)
+app.post('/api/sponsors', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const { name, budget, start_date, end_date } = req.body;
+
+    if (!name || !budget || !start_date || !end_date) {
+        return res.status(400).json({ error: "Tous les champs sont requis." });
+    }
+
+    try {
+        const sql = `INSERT INTO sponsors (name, budget, start_date, end_date, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`;
+        const { rows } = await db.query(sql, [name, parseFloat(budget), start_date, end_date, userId]);
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error("Erreur POST /api/sponsors:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE /api/sponsors/:id
+app.delete('/api/sponsors/:id', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    try {
+        await db.query('DELETE FROM sponsors WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+        res.json({ message: "Campagne supprimée." });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/sponsors (Calcul ROI avec Debugging et Dates Robustes)
+app.get('/api/sponsors', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    console.log("\n--- DEMANDE DE CALCUL ROI SPONSORS ---");
+
+    try {
+        // 1. Récupérer données
+        const { rows: campaigns } = await db.query('SELECT * FROM sponsors WHERE user_id = $1 ORDER BY start_date DESC', [userId]);
+        const { rows: allCommandes } = await db.query(`SELECT date_commande, prix_total, articles, type_livraison, adresse, etat FROM commandes WHERE user_id = $1`, [userId]);
+        
+        // On récupère UNIQUEMENT les dépenses pour alléger, mais on filtre le reste en JS
+        const { rows: allTransactions } = await db.query(`SELECT date, montant, type, categorie FROM transactions WHERE user_id = $1 AND type = 'depense'`, [userId]);
+
+        // Fonction pour convertir n'importe quelle date en format standard "YYYY-MM-DD"
+        const toStandardDate = (dateStr) => {
+            if (!dateStr) return "0000-00-00";
+            // Cas 1 : Format DD/MM/YYYY (Google Sheets)
+            if (dateStr.includes('/')) {
+                const [day, month, year] = dateStr.split('/');
+                return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+            // Cas 2 : Format YYYY-MM-DD (Standard) ou Date ISO
+            if (dateStr.includes('-')) {
+                // On garde juste les 10 premiers caractères (YYYY-MM-DD)
+                return dateStr.substring(0, 10);
+            }
+            return "0000-00-00";
+        };
+
+        const campaignsWithStats = campaigns.map(camp => {
+            // Conversion des dates de la campagne en chaînes comparables
+            const startStr = toStandardDate(camp.start_date);
+            const endStr = toStandardDate(camp.end_date);
+
+            console.log(`\n🔍 Analyse Campagne: "${camp.name}" (${startStr} au ${endStr})`);
+
+            // --- 1. Calcul DTF ---
+            let totalDTF = 0;
+            
+            allTransactions.forEach(tx => {
+                const txDateStr = toStandardDate(tx.date);
+                const catNormalized = normalizeStatus(tx.categorie);
+                
+                // Vérifications
+                const isDateIn = txDateStr >= startStr && txDateStr <= endStr;
+                const isDTF = catNormalized.includes('dtf');
+
+                // LOG DE DEBUG (Pour voir ce qui se passe)
+                if (isDateIn && isDTF) {
+                    console.log(`   ✅ DTF Trouvé : ${tx.date} | ${tx.montant} DA`);
+                    totalDTF += (parseFloat(tx.montant) || 0);
+                } else if (isDTF && !isDateIn) {
+                    // Si c'est un DTF mais hors date, on l'affiche pour comprendre
+                    // console.log(`   ❌ DTF Hors Date : ${tx.date} (Hors de ${startStr}-${endStr})`);
+                }
+            });
+            
+            console.log(`   💰 Total DTF retenu : ${totalDTF} DA`);
+
+
+            // --- 2. Calcul Commandes ---
+            const commandesInCampaign = allCommandes.filter(cmd => {
+                const cmdDateStr = toStandardDate(cmd.date_commande);
+                const isDateMatch = cmdDateStr >= startStr && cmdDateStr <= endStr;
+                
+                const status = normalizeStatus(cmd.etat);
+                const isValidStatus = status !== 'annule' && status !== 'echange' && status !== 'nonconfirme';
+                
+                return isDateMatch && isValidStatus;
+            });
+
+            let totalVentes = 0;
+            let totalCoutArticles = 0;
+            let totalLivraison = 0;
+
+            commandesInCampaign.forEach(cmd => {
+                const cleanPrix = String(cmd.prix_total || '0').replace(/[^0-9.,]/g, '').replace(',', '.');
+                totalVentes += parseFloat(cleanPrix) || 0;
+                totalCoutArticles += parseArticleCost(cmd.articles || '[]');
+                totalLivraison += getLivraisonCost(cmd.type_livraison, cmd.adresse);
+            });
+
+            const beneficeCommandes = totalVentes - totalCoutArticles - totalLivraison;
+            const resultatNet = beneficeCommandes - camp.budget - totalDTF;
+            
+            return {
+                ...camp,
+                stats: {
+                    commandesCount: commandesInCampaign.length,
+                    totalVentes,
+                    totalCoutArticles,
+                    totalLivraison,
+                    totalDTF,
+                    beneficeCommandes,
+                    resultatNet
+                }
+            };
+        });
+
+        res.json(campaignsWithStats);
+
+    } catch (err) {
+        console.error("Erreur GET /api/sponsors:", err);
         res.status(500).json({ error: err.message });
     }
 });
