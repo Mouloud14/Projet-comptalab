@@ -1,14 +1,32 @@
-// src/components/TransactionForm.jsx (Corrigé - alert() supprimé)
+// src/components/TransactionForm.jsx (Ajout de la catégorie "VERSEMENT")
 import React, { useState, useEffect } from 'react';
 import './TransactionForm.css';
 
-const depenseCategories = [ 'DTF', 'STOCK', 'EURO', 'LIVREUR', 'TRANSPORT', 'FOOD', 'AUTRES' ,'REMBOURSEMENT' ];
+// NOUVEAU: Ajout de "VERSEMENT"
+const depenseCategories = [ 'DTF', 'STOCK', 'EURO', 'LIVREUR', 'TRANSPORT', 'FOOD', 'AUTRES' ,'REMBOURSEMENT', 'VERSEMENT' ];
 const revenuCategories = [ 
   'ZR express', 
   'main a main', 
   'baridi mob', 
   'autre' 
 ];
+
+// MAPPING DES DESCRIPTIONS PAR DÉFAUT (Ajouté pour la correction)
+const defaultDescriptions = {
+    'FOOD': 'Repas / Restaurant',
+    'LIVREUR': 'Paiement livreur',
+    'ZR express': 'Encaissement des ventes',
+    'STOCK': 'Achat de marchandise/matières premières',
+    'EURO': 'Achat en devise étrangère',
+    'DTF': 'Achat de papier transfert',
+    'REMBOURSEMENT': 'Remboursement de frais',
+    'baridi mob': 'Virement CCP ou BaridiMob',
+    'TRANSPORT': 'Coût de transport non lié à la livraison',
+    'VERSEMENT': 'Transfert de fonds ou mise de côté', // NOUVEAU
+    'AUTRES': '', 
+    'autre': '',
+};
+
 
 function TransactionForm({ 
   onFormSubmit, 
@@ -39,10 +57,25 @@ function TransactionForm({
     }
   }, [transactionToEdit]);
 
+  // Gère l'auto-remplissage/nettoyage de la description
+  useEffect(() => {
+    if (!transactionToEdit && categorie) {
+        // Applique la description par défaut.
+        const defaultText = defaultDescriptions[categorie] || ''; 
+        setDescription(defaultText);
+    }
+  }, [categorie, transactionToEdit]);
+
+
   const handleTypeChange = (newType) => {
     setType(newType);
     setCategorie('');
   };
+  
+  const handleCategoryChange = (e) => {
+    setCategorie(e.target.value);
+  }
+
 
   const handleSubmit = async (event) => {
     event.preventDefault(); 
@@ -52,7 +85,7 @@ function TransactionForm({
     }
     const transactionData = { 
       date: selectedDate,
-      description, 
+      description: description || null, // Ensure empty string is null for DB
       montant: parseFloat(montant), 
       type, 
       categorie 
@@ -73,23 +106,16 @@ function TransactionForm({
       });
 
       if (response.ok) {
-        // const message = isEditMode ? 'Transaction modifiée !' : 'Transaction ajoutée !';
-        // alert(message); // <-- CETTE LIGNE EST SUPPRIMÉE
-        
-        // Affiche un log discret dans la console
         console.log(isEditMode ? 'Transaction modifiée !' : 'Transaction ajoutée !');
         
         onFormSubmit(); // Rafraîchit la liste
         
-        // Réinitialise le formulaire (sauf si on est en mode édition)
         if (isEditMode) {
         	setTransactionToEdit(null); // Quitte le mode édition
         } else {
         	// Réinitialise juste les champs modifiables
         	setMontant(0);
-        	setCategorie('');
-        	setDescription('');
-        	// On garde le 'type' et la 'date' pour l'ajout rapide
+        	// Conserve la catégorie et la description pour le prochain ajout rapide
         }
         
       } else {
@@ -133,7 +159,7 @@ function TransactionForm({
 
     	 <div className="form-control">
     	 	 <label>Catégorie:</label>
-        <select value={categorie} onChange={(e) => setCategorie(e.target.value)} required>
+        <select value={categorie} onChange={handleCategoryChange} required>
           <option value="" disabled>-- Choisir une catégorie --</option>
           {type === 'depense'
             ? depenseCategories.map(cat => (<option key={cat} value={cat}>{cat}</option>))
