@@ -3,7 +3,16 @@ import { Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
 
 // Import des icônes Font Awesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome, faExchangeAlt, faBox, faClipboardList, faUndo, faSignOutAlt, faHandshake } from '@fortawesome/free-solid-svg-icons';
+import { 
+  faHome, 
+  faExchangeAlt, 
+  faBox, 
+  faClipboardList, 
+  faUndo, 
+  faSignOutAlt, 
+  faHandshake, 
+  faBullhorn // ✅ Ajout de l'icône faBullhorn
+} from '@fortawesome/free-solid-svg-icons';
 
 // Imports des Pages
 import LoginPage from './pages/LoginPage';
@@ -12,6 +21,7 @@ import StockPage from './pages/StockPage';
 import CommandesPage from './pages/CommandesPage';
 import RetoursPage from './pages/RetoursPage';
 import DettesPage from './pages/DettesPage';
+import SponsorsPage from './pages/SponsorsPage'; // ✅ Ajout de l'import de la page Sponsors
 
 // Imports des Composants
 import TransactionForm from './components/TransactionForm';
@@ -34,6 +44,8 @@ function Sidebar({ handleLogout }) {
         <li> <Link to="/commandes"> <FontAwesomeIcon icon={faClipboardList} className="sidebar-icon" /> <span className="sidebar-text">Commandes</span> </Link> </li>
         <li> <Link to="/retours"> <FontAwesomeIcon icon={faUndo} className="sidebar-icon" /> <span className="sidebar-text">Retours</span> </Link> </li>
         <li> <Link to="/dettes"> <FontAwesomeIcon icon={faHandshake} className="sidebar-icon" /> <span className="sidebar-text">Dettes</span> </Link> </li>
+        {/* ✅ Ajout du lien Sponsors dans la Sidebar */}
+        <li> <Link to="/sponsors"> <FontAwesomeIcon icon={faBullhorn} className="sidebar-icon" /> <span className="sidebar-text">Sponsors</span> </Link> </li>
       </ul>
       <button onClick={handleLogout} className="logout-button-sidebar">
         <FontAwesomeIcon icon={faSignOutAlt} className="sidebar-icon" />
@@ -48,7 +60,7 @@ function Sidebar({ handleLogout }) {
 function App() {
   // --- États Globaux ---
   const [transactions, setTransactions] = useState([]);
-  const [soldeTotal, setSoldeTotal] = useState(0); // 🚨 NOUVEL ÉTAT
+  const [soldeTotal, setSoldeTotal] = useState(0);
   const [transactionToEdit, setTransactionToEdit] = useState(null);
   const today = new Date().toISOString().slice(0, 10);
   const [selectedDate, setSelectedDate] = useState(today);
@@ -57,7 +69,6 @@ function App() {
   const navigate = useNavigate();
 
   // --- Fonctions Backend ---
-  // Utilisation de useCallback pour stabiliser la fonction
   const refreshTransactions = useCallback(async () => {
     console.log("Déclenchement du rafraîchissement des transactions...");
     if (!token) return;
@@ -69,10 +80,9 @@ function App() {
       if (response.ok) {
         const data = await response.json();
         
-        // ✅ CORRECTION CRITIQUE ICI : lecture de la nouvelle structure {transactions, solde}
         if (data && Array.isArray(data.transactions)) {
           setTransactions(data.transactions);
-          setSoldeTotal(data.solde || 0); // Mise à jour du solde
+          setSoldeTotal(data.solde || 0);
           console.log(`${data.transactions.length} transactions chargées.`);
         } else {
           setTransactions([]);
@@ -107,7 +117,7 @@ function App() {
       } else {
         const data = await response.json();
         console.log(`Auto-Sync: ${data.message}`);
-        refreshTransactions(); // <-- Rafraîchit les transactions après la synchro
+        refreshTransactions();
       }
     } catch (err) {
       console.error("Auto-Sync: Erreur réseau.", err);
@@ -117,12 +127,12 @@ function App() {
   useEffect(() => {
     let syncTimer;
     if (token) {
-      refreshTransactions(); // Premier appel pour charger les données
-      runBackgroundSync(); // Premier appel pour la synchro
+      refreshTransactions();
+      runBackgroundSync();
       syncTimer = setInterval(runBackgroundSync, 120000);
     } else {
       setTransactions([]);
-      setSoldeTotal(0); // Réinitialiser le solde
+      setSoldeTotal(0);
     }
     return () => {
       if (syncTimer) {
@@ -143,7 +153,7 @@ function App() {
     setToken(null);
     setCurrentUser(null);
     setTransactions([]);
-    setSoldeTotal(0); // Réinitialiser le solde
+    setSoldeTotal(0);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
@@ -179,7 +189,6 @@ function App() {
 
   // --- Calculs ---
   const filteredTransactions = Array.isArray(transactions) ? transactions.filter(tx => tx.date === selectedDate) : [];
-  // soldeActuel est remplacé par soldeTotal provenant de l'API
   // --- Fin Calculs ---
 
 
@@ -216,7 +225,7 @@ function App() {
                       selectedDate={selectedDate} 
                       onDateChange={setSelectedDate} 
                       totalDepensesJour={filteredTransactions.filter(tx => tx.type === 'depense').reduce((acc, tx) => acc + tx.montant, 0)}
-                      soldeTotal={soldeTotal} // 🚨 NOUVEAU PROP PASSÉ
+                      soldeTotal={soldeTotal}
                     /> 
                   </div>
                 </div>
@@ -242,7 +251,7 @@ function App() {
                 <div className="app-container home-page-container">
                   <HomePage
                     username={currentUser?.username}
-                    currentBalance={soldeTotal} // Utilise le solde fourni par l'API
+                    currentBalance={soldeTotal}
                     token={token}
                     transactionsDuJour={filteredTransactions}
                   />
@@ -253,7 +262,7 @@ function App() {
         }
       />
 
-      {/* --- Autres routes (stock, commandes, retours, dettes) inchangées --- */}
+      {/* --- Autres routes --- */}
       <Route
         path="/stock"
         element={
@@ -302,6 +311,21 @@ function App() {
               <Sidebar handleLogout={handleLogout} />
               <main className="main-page-content main-page-content-full-width">
                 <DettesPage token={token} />
+              </main>
+            </div>
+          ) : <Navigate to="/login" replace />
+        }
+      />
+
+      {/* ✅ Nouvelle Route : Sponsors */}
+      <Route
+        path="/sponsors"
+        element={
+          token ? (
+            <div className="page-layout-with-sidebar">
+              <Sidebar handleLogout={handleLogout} />
+              <main className="main-page-content main-page-content-full-width">
+                <SponsorsPage token={token} />
               </main>
             </div>
           ) : <Navigate to="/login" replace />

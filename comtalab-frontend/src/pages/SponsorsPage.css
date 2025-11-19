@@ -1,0 +1,164 @@
+/* src/pages/SponsorsPage.css */
+.sponsors-page-content {
+    padding: 20px;
+}
+
+.sponsors-header {
+    margin-bottom: 30px;
+    text-align: center;
+    color: var(--accent-color);
+}
+
+/* Formulaire d'ajout (Style horizontal comme Stock) */
+.add-sponsor-form {
+    background-color: var(--card-background);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    margin-bottom: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 150px;
+}
+
+.form-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin-bottom: 5px;
+}
+
+.form-group input {
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+
+.btn-add-sponsor {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    height: 42px; /* Match input height roughly */
+}
+
+.btn-add-sponsor:hover {
+    background-color: var(--accent-hover);
+}
+
+/* Grille des cartes */
+.sponsors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.sponsor-card {
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.sponsor-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.sponsor-title h3 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 1.2rem;
+}
+
+.sponsor-dates {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-top: 5px;
+}
+
+.btn-delete-sponsor {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
+
+.sponsor-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
+.stat-value {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.stat-budget { color: #555; }
+.stat-ca { color: var(--accent-color); }
+.stat-costs { color: var(--danger-color); }
+
+.roi-section {
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 2px dashed #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.roi-label {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.roi-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.roi-positive { color: #2ecc71; } /* Vert */
+.roi-negative { color: #e74c3c; } /* Rouge */
+
+@media (max-width: 768px) {
+    .add-sponsor-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .btn-add-sponsor {
+        width: 100%;
+    }
+}
