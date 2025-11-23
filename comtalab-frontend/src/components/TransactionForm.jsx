@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import './TransactionForm.css';
 
 // NOUVEAU: Ajout de "VERSEMENT"
-const depenseCategories = [ 'DTF', 'STOCK', 'EURO', 'LIVREUR', 'TRANSPORT', 'FOOD', 'AUTRES' ,'REMBOURSEMENT', 'VERSEMENT' ];
+const depenseCategories = [ 'DTF', 'STOCK', 'EURO', 'LIVREUR', 'TRANSPORT', 'FOOD', 'AUTRES' ,'REMBOURSEMENT', 'VERSEMENT','FACTURE' ];
 const revenuCategories = [ 
   'ZR express', 
   'main a main', 
@@ -13,18 +13,20 @@ const revenuCategories = [
 
 // MAPPING DES DESCRIPTIONS PAR DÉFAUT (Ajouté pour la correction)
 const defaultDescriptions = {
-    'FOOD': 'Repas / Restaurant',
-    'LIVREUR': 'Paiement livreur',
-    'ZR express': 'Encaissement des ventes',
-    'STOCK': 'Achat de marchandise/matières premières',
-    'EURO': 'Achat en devise étrangère',
-    'DTF': 'Achat de papier transfert',
-    'REMBOURSEMENT': 'Remboursement de frais',
-    'baridi mob': 'Virement CCP ou BaridiMob',
-    'TRANSPORT': 'Coût de transport non lié à la livraison',
-    'VERSEMENT': 'Transfert de fonds ou mise de côté', // NOUVEAU
+    'FOOD': '',
+    'LIVREUR': '',
+    'ZR express': '',
+    'STOCK': '',
+    'EURO': '',
+    'DTF': '',
+    'REMBOURSEMENT': '',
+    'baridi mob': '',
+    'TRANSPORT': '',
+    'VERSEMENT': '',
+    'FACTURE':'', 
     'AUTRES': '', 
     'autre': '',
+    
 };
 
 

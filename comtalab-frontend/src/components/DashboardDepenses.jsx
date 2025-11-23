@@ -17,11 +17,11 @@ function DashboardDepenses({ allTransactions, selectedDate }) {
   }
   // --- FIN DE LA VÉRIFICATION ---
 
-  // --- LOGIQUE DE CALCUL (reste identique) ---
+  // --- LOGIQUE DE CALCUL ---
   const today = new Date();
   const currentYear = today.getFullYear();
 
-  const transactionsToAnalyze = allTransactions.filter(tx => { /* ... (logique filtre identique) ... */
+  const transactionsToAnalyze = allTransactions.filter(tx => {
      const txDate = new Date(tx.date);
     if (timeRange === 'day') { return tx.type === 'depense' && tx.date === selectedDate; }
     else if (timeRange === 'week') { const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); return tx.type === 'depense' && txDate >= sevenDaysAgo && txDate <= today; }
@@ -44,7 +44,6 @@ function DashboardDepenses({ allTransactions, selectedDate }) {
     return acc;
   }, {});
 
-  // On s'assure que pieData est TOUJOURS un tableau, même si Object.keys échoue
   let pieData = [];
   try {
       pieData = Object.keys(depensesParCategorie).map(categorie => ({
@@ -53,14 +52,12 @@ function DashboardDepenses({ allTransactions, selectedDate }) {
       })).sort((a, b) => b.value - a.value);
   } catch(e) {
       console.error("Erreur calcul pieData (Dépenses):", e);
-      // pieData reste []
   }
 
 
   return (
     <div className="dashboard-wrapper">
       <div className="tabs">
-         {/* ... (boutons onglets identiques) ... */}
          <button className={`tab-button ${timeRange === 'day' ? 'active' : ''}`} onClick={() => setTimeRange('day')}>Jour</button>
          <button className={`tab-button ${timeRange === 'week' ? 'active' : ''}`} onClick={() => setTimeRange('week')}>7 Jours</button>
          <button className={`tab-button ${timeRange === 'month' ? 'active' : ''}`} onClick={() => setTimeRange('month')}>Ce Mois</button>
@@ -68,12 +65,43 @@ function DashboardDepenses({ allTransactions, selectedDate }) {
       </div>
 
       <div className="chart-section">
-         {/* ... (graphique identique, utilise pieData qui est garanti d'être un tableau) ... */}
-         {pieData.length > 0 ? ( <ResponsiveContainer width="100%" height={250}> <PieChart> <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label={(entry) => `${entry.name} (${(entry.percent * 100).toFixed(0)}%)`}> {pieData.map((entry, index) => ( <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} /> ))} </Pie> <Tooltip formatter={(value) => `${formatArgent(value)} DZD`}/> </PieChart> </ResponsiveContainer> ) : ( <div className="no-data-chart"><span>Pas de dépenses...</span></div> )}
+         {pieData.length > 0 ? (
+            <div className="chart-content">
+                {/* Bloc 1: Liste des catégories (DÉPENSES) */}
+                <div className="chart-detail-list">
+                    {/* Génère une ligne par catégorie trouvée dans pieData */}
+                    {pieData.map((data, index) => (
+                        <div key={data.name} className="detail-line" style={{ borderLeftColor: COLORS[index % COLORS.length] }}>
+                            <span className="detail-name">{data.name}</span>
+                            <span className="detail-value">{formatArgent(data.value)} DZD</span>
+                        </div>
+                    ))}
+                </div>
+                
+                {/* Bloc 2: Le graphique (Rayon réduit) */}
+                <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                         <Pie
+                            data={pieData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80} // Réduit le rayon
+                            fill="#8884d8"
+                            label={(entry) => `${(entry.percent * 100).toFixed(0)}%`} // Affiche seulement le pourcentage
+                            labelLine={false} // Cache la ligne du label
+                        >
+                            {pieData.map((entry, index) => ( <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} /> ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => `${formatArgent(value)} DZD`}/>
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
+         ) : ( <div className="no-data-chart"><span>Pas de dépenses...</span></div> )}
       </div>
 
       <div className="stats-section">
-         {/* ... (statistiques identiques) ... */}
          <div className="stat-line"><span>Total Dépenses (...):</span><span className="stat-value depense">{formatArgent(totalDepenses)} DZD</span></div>
          {timeRange !== 'day' && timeRange !== 'year' && (<> <hr className="summary-divider" /> <div className="stat-line"><span>Moyenne / jour:</span><span className="stat-value depense">{formatArgent(moyenne)} DZD</span></div> </>)}
       </div>
