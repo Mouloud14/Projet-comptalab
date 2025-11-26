@@ -2175,10 +2175,10 @@ app.delete('/api/sponsors/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// GET /api/sponsors (Calcul ROI avec Debugging et Dates Robustes)
 app.get('/api/sponsors', authenticateToken, async (req, res) => {
     const userId = req.user.id;
-    console.log("\n--- DEMANDE DE CALCUL ROI SPONSORS ---");
+    const { start_date, end_date } = req.query; // <-- NOUVEAU
+    console.log(`\n--- DEMANDE DE CALCUL ROI SPONSORS (Filtre: ${start_date} à ${end_date}) ---`);
 
     try {
         // 1. Récupérer données
@@ -2204,15 +2204,87 @@ app.get('/api/sponsors', authenticateToken, async (req, res) => {
             return "0000-00-00";
         };
 
+        // ----------------------------------------------------
+        // NOUVEAU: CALCUL DU GLOBAL SUMMARY (Basé sur les dates de la query)
+        // ----------------------------------------------------
+        const globalStartStr = start_date ? toStandardDate(start_date) : "0000-00-00";
+        const globalEndStr = end_date ? toStandardDate(end_date) : "9999-12-31"; // Date future arbitraire
+
+        let totalBudget = 0;
+        let totalVentes = 0;
+        let totalCoutArticles = 0;
+        let totalLivraison = 0;
+        let totalDTF = 0;
+
+        // 1. Filtrer les campagnes (pour agréger le budget)
+        campaigns.forEach(camp => {
+            const campStartStr = toStandardDate(camp.start_date);
+            const campEndStr = toStandardDate(camp.end_date);
+            
+            // Critère d'inclusion: Les périodes se chevauchent
+            const overlaps = campStartStr <= globalEndStr && campEndStr >= globalStartStr;
+
+            if (overlaps) {
+                totalBudget += (camp.budget || 0);
+            }
+        });
+
+        // 2. Filtrer les Transactions (DTF)
+        allTransactions.forEach(tx => {
+            const txDateStr = toStandardDate(tx.date);
+            const catNormalized = normalizeStatus(tx.categorie);
+            
+            // Critère: Est dans la période globale ET est un DTF
+            const isDateIn = txDateStr >= globalStartStr && txDateStr <= globalEndStr;
+            const isDTF = catNormalized.includes('dtf');
+
+            if (isDateIn && isDTF) {
+                totalDTF += (parseFloat(tx.montant) || 0);
+            }
+        });
+        
+        // 3. Filtrer les Commandes (Ventes/Coûts)
+        allCommandes.forEach(cmd => {
+            const cmdDateStr = toStandardDate(cmd.date_commande);
+            
+            // Critère: Est dans la période globale ET est valide (non annulé/non confirmé)
+            const isDateIn = cmdDateStr >= globalStartStr && cmdDateStr <= globalEndStr;
+            const status = normalizeStatus(cmd.etat);
+            const isValidStatus = status !== 'annule' && status !== 'echange' && status !== 'nonconfirme';
+            
+            if (isDateIn && isValidStatus) {
+                const cleanPrix = String(cmd.prix_total || '0').replace(/[^0-9.,]/g, '').replace(',', '.');
+                totalVentes += parseFloat(cleanPrix) || 0;
+                totalCoutArticles += parseArticleCost(cmd.articles || '[]');
+                totalLivraison += getLivraisonCost(cmd.type_livraison, cmd.adresse);
+            }
+        });
+        
+        const globalVentesNettes = totalVentes - totalCoutArticles - totalLivraison;
+        const globalResultatNet = globalVentesNettes - totalBudget - totalDTF;
+        
+        const globalSummary = {
+            totalBudget: totalBudget,
+            totalDTF: totalDTF,
+            totalVentes: totalVentes,
+            totalCoutArticles: totalCoutArticles,
+            totalLivraison: totalLivraison,
+            globalVentesNettes: globalVentesNettes, // Nouveau pour le KPI
+            globalResultatNet: globalResultatNet
+        };
+
+        // ----------------------------------------------------
+        // ANCIENNE LOGIQUE (MAINTENUE): Calcul des stats par campagne (utilise TOUJOURS les dates de la campagne)
+        // ----------------------------------------------------
         const campaignsWithStats = campaigns.map(camp => {
             // Conversion des dates de la campagne en chaînes comparables
             const startStr = toStandardDate(camp.start_date);
             const endStr = toStandardDate(camp.end_date);
 
-            console.log(`\n🔍 Analyse Campagne: "${camp.name}" (${startStr} au ${endStr})`);
+            // ... (reste de la logique par campagne inchangée, pour la carte) ...
 
             // --- 1. Calcul DTF ---
-            let totalDTF = 0;
+            let totalDTF_camp = 0;
             
             allTransactions.forEach(tx => {
                 const txDateStr = toStandardDate(tx.date);
@@ -2222,19 +2294,11 @@ app.get('/api/sponsors', authenticateToken, async (req, res) => {
                 const isDateIn = txDateStr >= startStr && txDateStr <= endStr;
                 const isDTF = catNormalized.includes('dtf');
 
-                // LOG DE DEBUG (Pour voir ce qui se passe)
                 if (isDateIn && isDTF) {
-                    console.log(`   ✅ DTF Trouvé : ${tx.date} | ${tx.montant} DA`);
-                    totalDTF += (parseFloat(tx.montant) || 0);
-                } else if (isDTF && !isDateIn) {
-                    // Si c'est un DTF mais hors date, on l'affiche pour comprendre
-                    // console.log(`   ❌ DTF Hors Date : ${tx.date} (Hors de ${startStr}-${endStr})`);
+                    totalDTF_camp += (parseFloat(tx.montant) || 0);
                 }
             });
             
-            console.log(`   💰 Total DTF retenu : ${totalDTF} DA`);
-
-
             // --- 2. Calcul Commandes ---
             const commandesInCampaign = allCommandes.filter(cmd => {
                 const cmdDateStr = toStandardDate(cmd.date_commande);
@@ -2246,35 +2310,43 @@ app.get('/api/sponsors', authenticateToken, async (req, res) => {
                 return isDateMatch && isValidStatus;
             });
 
-            let totalVentes = 0;
-            let totalCoutArticles = 0;
-            let totalLivraison = 0;
+            let totalVentes_camp = 0;
+            let totalCoutArticles_camp = 0;
+            let totalLivraison_camp = 0;
 
             commandesInCampaign.forEach(cmd => {
                 const cleanPrix = String(cmd.prix_total || '0').replace(/[^0-9.,]/g, '').replace(',', '.');
-                totalVentes += parseFloat(cleanPrix) || 0;
-                totalCoutArticles += parseArticleCost(cmd.articles || '[]');
-                totalLivraison += getLivraisonCost(cmd.type_livraison, cmd.adresse);
+                totalVentes_camp += parseFloat(cleanPrix) || 0;
+                totalCoutArticles_camp += parseArticleCost(cmd.articles || '[]');
+                totalLivraison_camp += getLivraisonCost(cmd.type_livraison, cmd.adresse);
             });
 
-            const beneficeCommandes = totalVentes - totalCoutArticles - totalLivraison;
-            const resultatNet = beneficeCommandes - camp.budget - totalDTF;
+            const beneficeCommandes = totalVentes_camp - totalCoutArticles_camp - totalLivraison_camp;
+            const resultatNet = beneficeCommandes - camp.budget - totalDTF_camp;
             
             return {
                 ...camp,
                 stats: {
                     commandesCount: commandesInCampaign.length,
-                    totalVentes,
-                    totalCoutArticles,
-                    totalLivraison,
-                    totalDTF,
+                    totalVentes: totalVentes_camp,
+                    totalCoutArticles: totalCoutArticles_camp,
+                    totalLivraison: totalLivraison_camp,
+                    totalDTF: totalDTF_camp,
                     beneficeCommandes,
                     resultatNet
                 }
             };
         });
+        // ----------------------------------------------------
+        // FIN ANCIENNE LOGIQUE
+        // ----------------------------------------------------
 
-        res.json(campaignsWithStats);
+
+        // Renvoyer les deux objets
+        res.json({
+            campaigns: campaignsWithStats,
+            globalSummary: globalSummary // <-- NOUVEAU
+        });
 
     } catch (err) {
         console.error("Erreur GET /api/sponsors:", err);
