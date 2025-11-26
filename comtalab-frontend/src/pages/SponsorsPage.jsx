@@ -226,8 +226,8 @@ const SponsorsPage = ({ token }) => {
             {/* HEADER AVEC FILTRES COMPACTS */}
             <div className="page-header">
                 <div className="header-content">
-                    <h2><FontAwesomeIcon icon={faBullhorn} className="text-primary"/> Campagnes & ROI</h2>
-                    <p className="subtitle">Analysez la rentabilité de vos investissements publicitaires.</p>
+                    <h2><FontAwesomeIcon icon={faBullhorn} className="text-primary"/> Campagnes</h2>
+        
                 </div>
 
                 <div className="header-filters" title="Filtrer les statistiques globales">
