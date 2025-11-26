@@ -1,45 +1,86 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faBullhorn } from '@fortawesome/free-solid-svg-icons';
+import { 
+    faTrash, 
+    faBullhorn, 
+    faCalendarAlt, 
+    faChartPie,
+    faWallet, 
+    faCoins,
+    faPlus,
+    faBox,
+    faFilter,
+    faArrowTrendUp,
+    faArrowTrendDown
+} from '@fortawesome/free-solid-svg-icons';
 import './SponsorsPage.css';
 
-const formatArgent = (amount) => {
-    // Sécurité si undefined ou null
-    const val = amount || 0;
-    return new Intl.NumberFormat('fr-FR').format(Math.round(val)) + ' DZD';
+// Utilitaire de formatage
+const formatMoney = (amount) => {
+    return new Intl.NumberFormat('fr-FR', { 
+        style: 'currency', 
+        currency: 'DZD',
+        maximumFractionDigits: 0 
+    }).format(amount || 0);
 };
 
-function SponsorsPage({ token }) {
+const SponsorsPage = ({ token }) => {
     const [campaigns, setCampaigns] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [globalSummary, setGlobalSummary] = useState(null);
     
-    const [name, setName] = useState('');
-    const [budget, setBudget] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    // Form States
+    const [formData, setFormData] = useState({
+        name: '',
+        budget: '',
+        startDate: '',
+        endDate: ''
+    });
 
-    const fetchCampaigns = async () => {
+    // Filter States
+    const [filters, setFilters] = useState({
+        startDate: '',
+        endDate: ''
+    });
+    
+    const todayString = new Date().toISOString().slice(0, 10);
+    
+    // --- FETCH DATA ---
+    const fetchCampaigns = useCallback(async () => {
+        setLoading(true);
+        const params = new URLSearchParams();
+        if (filters.startDate) params.append('start_date', filters.startDate);
+        if (filters.endDate) params.append('end_date', filters.endDate);
+
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sponsors`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sponsors?${params.toString()}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (response.ok) {
                 const data = await response.json();
-                setCampaigns(data);
+                setCampaigns(data.campaigns);
+                setGlobalSummary(data.globalSummary);
             }
         } catch (error) {
             console.error("Erreur chargement sponsors:", error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [token, filters]);
 
     useEffect(() => {
         if (token) fetchCampaigns();
-    }, [token]);
+    }, [token, filters, fetchCampaigns]);
+
+    // --- HANDLERS ---
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
     const handleAddSponsor = async (e) => {
         e.preventDefault();
+        const { name, budget, startDate, endDate } = formData;
         if (!name || !budget || !startDate || !endDate) return;
 
         try {
@@ -58,7 +99,7 @@ function SponsorsPage({ token }) {
             });
 
             if (response.ok) {
-                setName(''); setBudget(''); setStartDate(''); setEndDate('');
+                setFormData({ name: '', budget: '', startDate: '', endDate: '' });
                 fetchCampaigns();
             } else {
                 alert("Erreur lors de l'ajout.");
@@ -69,7 +110,7 @@ function SponsorsPage({ token }) {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Supprimer cette campagne ?")) return;
+        if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette campagne ?")) return;
         try {
             await fetch(`${import.meta.env.VITE_API_URL}/api/sponsors/${id}`, {
                 method: 'DELETE',
@@ -81,91 +122,216 @@ function SponsorsPage({ token }) {
         }
     };
 
+    // --- COMPUTED DATA ---
+    const { activeCampaigns, archivedCampaigns } = useMemo(() => {
+        if (!Array.isArray(campaigns)) return { activeCampaigns: [], archivedCampaigns: [] };
+        
+        const active = [];
+        const archived = [];
+        
+        campaigns.forEach(camp => {
+            if (camp.end_date < todayString) {
+                archived.push(camp);
+            } else {
+                active.push(camp);
+            }
+        });
+
+        return { 
+            activeCampaigns: active.sort((a, b) => a.end_date.localeCompare(b.end_date)), 
+            archivedCampaigns: archived.sort((a, b) => b.end_date.localeCompare(a.end_date)) 
+        };
+    }, [campaigns, todayString]);
+
+    const kpiData = globalSummary || { 
+        totalBudget: 0, totalDTF: 0, totalVentes: 0, 
+        totalCoutArticles: 0, totalLivraison: 0, globalResultatNet: 0 
+    };
+    
+    const caNet = kpiData.totalVentes - kpiData.totalCoutArticles - kpiData.totalLivraison;
+    const totalDepenses = kpiData.totalBudget + kpiData.totalDTF;
+
+    // --- RENDER HELPERS ---
+    const renderCard = (camp) => {
+        const stats = camp.stats || { commandesCount: 0, totalDTF: 0, totalCoutArticles: 0, totalLivraison: 0, totalVentes: 0, resultatNet: -camp.budget };
+        const isPositive = stats.resultatNet >= 0;
+        const totalOps = stats.totalCoutArticles + stats.totalLivraison;
+
+        return (
+            <div key={camp.id} className="sponsor-card">
+                <div className="sponsor-card-top">
+                    <div className="sponsor-header-info">
+                        <h3>{camp.name}</h3>
+                        <div className="sponsor-date-badge">
+                            <FontAwesomeIcon icon={faCalendarAlt} /> 
+                            <span>{camp.start_date} au {camp.end_date}</span>
+                        </div>
+                    </div>
+                    <button onClick={() => handleDelete(camp.id)} className="btn-delete-icon" title="Supprimer">
+                        <FontAwesomeIcon icon={faTrash} />
+                    </button>
+                </div>
+
+                <div className="sponsor-body">
+                    <div className="stat-row">
+                        <div className="stat-group">
+                            <span className="stat-label">Commandes</span>
+                            <span className="stat-val">
+                                <FontAwesomeIcon icon={faBox} style={{color: '#94a3b8', marginRight: 6}}/> 
+                                {stats.commandesCount}
+                            </span>
+                        </div>
+                        <div className="stat-group">
+                            <span className="stat-label">Budget Pub</span>
+                            <span className="stat-val">{formatMoney(camp.budget)}</span>
+                        </div>
+                    </div>
+
+                    <div className="stat-divider"></div>
+
+                    <div className="stat-details-grid">
+                        <div className="detail-item negative">
+                            <span className="lbl">Coût DTF</span>
+                            <span className="val">- {formatMoney(stats.totalDTF)}</span>
+                        </div>
+                        <div className="detail-item negative">
+                            <span className="lbl">Coûts Ops.</span>
+                            <span className="val">- {formatMoney(totalOps)}</span>
+                        </div>
+                        <div className="detail-item positive">
+                            <span className="lbl">Chiffre d'Affaires</span>
+                            <span className="val">{formatMoney(stats.totalVentes)}</span>
+                        </div>
+                        <div className="detail-item">
+                            <span className="lbl">Marge Brute</span>
+                            <span className="val" style={{color: '#64748b'}}>
+                                {formatMoney(stats.totalVentes - totalOps - stats.totalDTF)}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className={`roi-footer ${isPositive ? 'roi-bg-green' : 'roi-bg-red'}`}>
+                    <span className="roi-title">RÉSULTAT NET</span>
+                    <span className="roi-number">
+                        {isPositive && '+'}{formatMoney(stats.resultatNet)}
+                    </span>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="sponsors-page-content">
-            <div className="sponsors-header">
-                <h2><FontAwesomeIcon icon={faBullhorn} /> Gestion des Campagnes & ROI</h2>
+            {/* HEADER AVEC FILTRES COMPACTS */}
+            <div className="page-header">
+                <div className="header-content">
+                    <h2><FontAwesomeIcon icon={faBullhorn} className="text-primary"/> Campagnes & ROI</h2>
+                    <p className="subtitle">Analysez la rentabilité de vos investissements publicitaires.</p>
+                </div>
+
+                <div className="header-filters" title="Filtrer les statistiques globales">
+                    <div className="filter-group-compact">
+                        <FontAwesomeIcon icon={faFilter} className="filter-label-icon" />
+                    </div>
+                    
+                    <input 
+                        type="date" 
+                        className="date-input-compact"
+                        value={filters.startDate} 
+                        onChange={e => setFilters({...filters, startDate: e.target.value})} 
+                    />
+                    
+                    <span className="separator-text">au</span>
+                    
+                    <input 
+                        type="date" 
+                        className="date-input-compact"
+                        value={filters.endDate} 
+                        onChange={e => setFilters({...filters, endDate: e.target.value})} 
+                    />
+                </div>
             </div>
 
-            <form className="add-sponsor-form" onSubmit={handleAddSponsor}>
-                <div className="form-group">
-                    <label>Nom de la Campagne</label>
-                    <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Pub Facebook" required />
+            {/* KPI SUMMARY */}
+            <div className="kpi-summary-container">
+                <div className="kpi-card blue">
+                    <div className="kpi-icon"><FontAwesomeIcon icon={faWallet} /></div>
+                    <div className="kpi-content">
+                        <span className="kpi-label">Budget Pub. Total</span>
+                        <span className="kpi-value">{formatMoney(kpiData.totalBudget)}</span>
+                    </div>
                 </div>
-                <div className="form-group">
-                    <label>Budget (DZD)</label>
-                    <input type="number" value={budget} onChange={e => setBudget(e.target.value)} placeholder="Ex: 20000" required />
+                <div className="kpi-card orange">
+                    <div className="kpi-icon"><FontAwesomeIcon icon={faCoins} /></div>
+                    <div className="kpi-content">
+                        <span className="kpi-label">Total Dépenses</span>
+                        <span className="kpi-value">{formatMoney(totalDepenses)}</span>
+                    </div>
                 </div>
-                <div className="form-group">
-                    <label>Date Début</label>
-                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
+                <div className="kpi-card green">
+                    <div className="kpi-icon"><FontAwesomeIcon icon={faChartPie} /></div>
+                    <div className="kpi-content">
+                        <span className="kpi-label">Bénéfice Brut</span>
+                        <span className="kpi-value">{formatMoney(caNet)}</span>
+                    </div>
                 </div>
-                <div className="form-group">
-                    <label>Date Fin</label>
-                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} required />
+                <div className={`kpi-card ${kpiData.globalResultatNet >= 0 ? 'green' : 'red'}`}>
+                    <div className="kpi-icon">
+                        <FontAwesomeIcon icon={kpiData.globalResultatNet >= 0 ? faArrowTrendUp : faArrowTrendDown} />
+                    </div>
+                    <div className="kpi-content">
+                        <span className="kpi-label">Résultat Net Final</span>
+                        <span className="kpi-value">{formatMoney(kpiData.globalResultatNet)}</span>
+                    </div>
                 </div>
-                <button type="submit" className="btn-add-sponsor">Ajouter</button>
-            </form>
+            </div>
 
-            {loading ? <p>Chargement...</p> : (
-                <div className="sponsors-grid">
-                    {campaigns.length === 0 ? <p>Aucune campagne enregistrée.</p> : campaigns.map(camp => {
-                        const { stats } = camp;
-                        const isPositive = stats.resultatNet >= 0;
+            {/* FORMULAIRE D'AJOUT */}
+            <div className="form-section">
+                <h3><FontAwesomeIcon icon={faPlus} className="text-primary"/> Nouvelle Campagne</h3>
+                <form className="modern-form" onSubmit={handleAddSponsor}>
+                    <div className="input-group">
+                        <label>Nom de la Campagne</label>
+                        <input name="name" type="text" value={formData.name} onChange={handleInputChange} placeholder="Ex: Promo Été 2024" required />
+                    </div>
+                    <div className="input-group">
+                        <label>Budget (DZD)</label>
+                        <input name="budget" type="number" value={formData.budget} onChange={handleInputChange} placeholder="0.00" required />
+                    </div>
+                    <div className="input-group">
+                        <label>Date Début</label>
+                        <input name="startDate" type="date" value={formData.startDate} onChange={handleInputChange} required />
+                    </div>
+                    <div className="input-group">
+                        <label>Date Fin</label>
+                        <input name="endDate" type="date" value={formData.endDate} onChange={handleInputChange} required />
+                    </div>
+                    <button type="submit" className="btn-submit">Lancer la campagne</button>
+                </form>
+            </div>
 
-                        return (
-                            <div key={camp.id} className="sponsor-card">
-                                <div className="sponsor-card-header">
-                                    <div className="sponsor-title">
-                                        <h3>{camp.name}</h3>
-                                        <div className="sponsor-dates">
-                                            {camp.start_date} au {camp.end_date}
-                                        </div>
-                                    </div>
-                                    <button onClick={() => handleDelete(camp.id)} className="btn-delete-sponsor">
-                                        <FontAwesomeIcon icon={faTrash} />
-                                    </button>
-                                </div>
-
-                                <div className="sponsor-stats">
-                                    <div className="stat-item">
-                                        <span className="stat-label">Commandes (Valides)</span>
-                                        <span className="stat-value">{stats.commandesCount} cmds</span>
-                                    </div>
-                                    <div className="stat-item">
-                                        <span className="stat-label">Budget Pub</span>
-                                        <span className="stat-value stat-budget">{formatArgent(camp.budget)}</span>
-                                    </div>
-                                    
-                                    {/* --- ICI : LE BLOC DTF QUI MANQUAIT PEUT-ÊTRE --- */}
-                                    <div className="stat-item">
-                                        <span className="stat-label">Coût DTF</span>
-                                        <span className="stat-value stat-costs" style={{ color: '#e67e22' }}>
-                                            - {formatArgent(stats.totalDTF)}
-                                        </span>
-                                    </div>
-                                    {/* ----------------------------------------------- */}
-
-                                    <div className="stat-item">
-                                        <span className="stat-label">Chiffre d'Affaires</span>
-                                        <span className="stat-value stat-ca">{formatArgent(stats.totalVentes)}</span>
-                                    </div>
-                                    <div className="stat-item">
-                                        <span className="stat-label">Coûts (Art. + Livr.)</span>
-                                        <span className="stat-value stat-costs">- {formatArgent(stats.totalCoutArticles + stats.totalLivraison)}</span>
-                                    </div>
-                                </div>
-
-                                <div className="roi-section">
-                                    <span className="roi-label">RÉSULTAT NET :</span>
-                                    <span className={`roi-value ${isPositive ? 'roi-positive' : 'roi-negative'}`}>
-                                        {isPositive ? '+' : ''}{formatArgent(stats.resultatNet)}
-                                    </span>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+            {/* GRILLES DE CAMPAGNES */}
+            {loading ? (
+                <div style={{textAlign: 'center', padding: '40px', color: '#64748b'}}>Chargement des données...</div>
+            ) : (
+                <>
+                    <div className="section-separator">
+                        <h3 className="section-title active">En Cours ({activeCampaigns.length})</h3>
+                        <div className="line"></div>
+                    </div>
+                    <div className="sponsors-grid">
+                        {activeCampaigns.length === 0 ? <div className="empty-state">Aucune campagne active.</div> : activeCampaigns.map(renderCard)}
+                    </div>
+                    
+                    <div className="section-separator">
+                        <h3 className="section-title">Historique ({archivedCampaigns.length})</h3>
+                        <div className="line"></div>
+                    </div>
+                    <div className="sponsors-grid opacity-dimmed">
+                        {archivedCampaigns.length === 0 ? <div className="empty-state">Aucune archive disponible.</div> : archivedCampaigns.map(renderCard)}
+                    </div>
+                </>
             )}
         </div>
     );
